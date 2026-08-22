@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Datenschutz – FamLumi</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS — gedeckt, aber kräftig. Ein warmer Verlauf
+     (Koralle -> Rose -> Lavendel) als Markenfarbe, dazu ein tiefes
+     Pflaumen-Dunkel für Kontrast-Momente ("Spotlight"-Karten).
+     ============================================================ */
+  :root {
+    --cream: #FBF7F2;
+    --ink: #241B3A;
+    --ink-soft: #4A3F5C;
+
+    --c1: #C97B63;   /* gedeckte Terrakotta - Mitglied 1 */
+    --c2: #6FA28D;   /* gedecktes Salbeigrün - Mitglied 2 */
+    --c3: #8879B0;   /* gedecktes Lavendel - Mitglied 3 */
+    --c4: #B1396B;   /* Rose (dunkler) - passend zum aktuellen App-Farbton */
+    --amber: #D4A25E;
+
+    --grad-hero: linear-gradient(150deg, #C97B63 0%, #BE7A97 45%, #8879B0 100%);
+    --grad-spotlight: linear-gradient(135deg, #2A2436, #3A3248);
+    --grad-wish: linear-gradient(135deg, #D4A25E, #C990AC);
+    --grad-btn: linear-gradient(135deg, #C97B63, #BE7A97);
+
+    --radius-xl: 26px;
+    --radius-lg: 20px;
+    --radius-md: 16px;
+    --shadow-card: 0 8px 20px rgba(60, 30, 50, 0.08);
+    --shadow-pop: 0 16px 34px rgba(60, 30, 50, 0.16);
+
+    /* Drei Schrift-Rollen, alle aus System-Schriften zusammengestellt - keine
+       einzige Datei wird von einem externen Server nachgeladen:
+       - Display: die Serifen-Systemschrift des Geräts (iOS: Georgia/New York,
+         Android: der Geräte-Serifensatz)
+       - Script: die auf so gut wie jedem Gerät vorinstallierte Schreibschrift
+         (iOS: Snell Roundhand/Apple Chancery, Windows: Segoe Script,
+         generisches "cursive" als letzter Fallback für Android)
+       - Body: die native System-UI-Schrift (iOS: SF Pro, Android: Roboto) */
+    --font-display: Georgia, "Iowan Old Style", "Times New Roman", ui-serif, serif;
+    --font-script: "Snell Roundhand", "Apple Chancery", "Segoe Script", "Bradley Hand", cursive;
+    --font-body: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { overflow-x: hidden; width: 100%; }
+  body { margin: 0; width: 100%; overflow-x: hidden; background: var(--cream); color: var(--ink-soft); font-family: var(--font-body); font-weight: 500; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  input, textarea { font-family: inherit; }
+
+  .app { position: relative; min-height: 100vh; width: 100%; max-width: 480px; margin: 0 auto; overflow-x: hidden; padding-bottom: 6.5rem; }
+  .container { padding: 1.5rem 1.15rem 0; position: relative; z-index: 1; }
+
+  /* ---------- Hero-Header ---------- */
+  .hero { background: var(--grad-hero); padding: calc(1.6rem + env(safe-area-inset-top, 0px)) 1.15rem 3.2rem; border-radius: 0 0 36px 36px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; right: -50px; top: -60px; width: 190px; height: 190px; border-radius: 999px; background: rgba(255,255,255,0.14); }
+  .hero::after { content: ""; position: absolute; left: -40px; bottom: -70px; width: 150px; height: 150px; border-radius: 999px; background: rgba(255,255,255,0.1); }
+  .hero-top { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
+  .logo { font-family: var(--font-script); font-weight: 700; font-size: 30px; color: white; text-shadow: 0 2px 12px rgba(0,0,0,0.12); }
+  .avatar-row { display: flex; }
+  .avatar-btn { width: 30px; height: 30px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.85); margin-left: -9px; display: grid; place-items: center; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.18); }
+  .greeting { margin-top: 1.1rem; font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 26px; color: white; line-height: 1.25; position: relative; z-index: 1; text-shadow: 0 2px 14px rgba(0,0,0,0.1); }
+  .chip-row { display: flex; gap: 7px; margin-top: 0.9rem; position: relative; z-index: 1; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.2); backdrop-filter: blur(6px); padding: 0.38rem 0.75rem; border-radius: 999px; font-size: 11px; color: white; font-weight: 700; border: 1px solid rgba(255,255,255,0.22); }
+  .mascot { position: absolute; right: 14px; bottom: -6px; font-size: 30px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.25)); z-index: 2; }
+
+  /* ---------- Schwebende Elemente ---------- */
+  .floating-field { background: white; border-radius: 16px; box-shadow: var(--shadow-card); padding: 0.7rem 0.9rem; display: flex; align-items: center; gap: 8px; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .floating-field:focus-within { transform: scale(1.015); box-shadow: var(--shadow-pop); }
+  .floating-field:active { transform: scale(0.98); }
+  .floating-field input, .floating-field textarea { border: none; outline: none; flex: 1; font-size: 13px; background: transparent; min-width: 0; }
+  .floating-field button.send { flex-shrink: 0; }
+
+  /* ---------- Spotlight (Kontrast-Karte) ---------- */
+  .spotlight { margin-top: 1.4rem; background: var(--grad-spotlight); border-radius: 24px; padding: 1.25rem 1.2rem; position: relative; overflow: hidden; box-shadow: 0 18px 36px rgba(42,32,64,0.3); }
+  .spotlight::after { content: ""; position: absolute; right: -30px; top: -30px; width: 120px; height: 120px; border-radius: 999px; background: radial-gradient(circle, rgba(232,177,90,0.3), transparent 70%); }
+  .spotlight-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--amber); position: relative; z-index: 1; }
+  .spotlight-txt { font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 19px; color: white; margin-top: 5px; line-height: 1.3; position: relative; z-index: 1; }
+  .spotlight-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 6px; position: relative; z-index: 1; }
+
+  /* ---------- Sections ---------- */
+  .section { margin-top: 1.8rem; }
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.8rem; gap: 8px; }
+  h2.section-title { font-family: var(--font-display); font-weight: 700; font-size: 19px; color: var(--ink); margin: 0; }
+  .section-link { font-size: 11px; font-weight: 700; color: var(--c4); background: none; white-space: nowrap; }
+
+  /* ---------- Mood-Strip ---------- */
+  .today-strip { display: flex; gap: 9px; overflow-x: auto; padding-bottom: 4px; }
+  .today-card { flex: 0 0 auto; width: 116px; border-radius: 16px; padding: 0.85rem 0.75rem; box-shadow: var(--shadow-card); position: relative; }
+  .today-card .emoji { font-size: 19px; }
+  .today-card .name { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px; opacity: 0.6; }
+  .today-card .txt { font-size: 12px; font-weight: 700; margin-top: 2px; line-height: 1.3; color: var(--ink); }
+  .today-card .del { position: absolute; top: 5px; right: 5px; width: 18px; height: 18px; border-radius: 999px; background: rgba(255,255,255,0.6); font-size: 8px; display: grid; place-items: center; }
+
+  /* ---------- Task-Rows ---------- */
+  .task-row { display: flex; align-items: center; gap: 10px; background: white; border-radius: 16px; padding: 0.8rem 0.95rem; margin-bottom: 9px; box-shadow: var(--shadow-card); border-left: 4px solid var(--rowc, var(--c1)); }
+  .check-circle { width: 26px; height: 26px; border-radius: 999px; border: 2px solid var(--rowc, var(--c1)); display: grid; place-items: center; flex-shrink: 0; font-size: 13px; color: white; transition: background 0.15s ease; }
+  .check-circle.checked { background: var(--rowc, var(--c1)); }
+  .task-body { flex: 1; min-width: 0; }
+  .task-who { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.5; }
+  .task-txt { font-size: 14px; font-weight: 700; color: var(--ink); margin-top: 1px; word-break: break-word; }
+  .task-txt.done { text-decoration: line-through; opacity: 0.45; }
+  .task-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .icon-btn { width: 25px; height: 25px; border-radius: 999px; background: #F5EEE6; font-size: 10px; display: grid; place-items: center; flex-shrink: 0; }
+  .thank-btn { font-size: 10px; font-weight: 700; color: white; background: var(--grad-btn); border-radius: 999px; padding: 0.4rem 0.75rem; white-space: nowrap; box-shadow: 0 6px 14px rgba(217,98,140,0.3); flex-shrink: 0; }
+  .edit-row-input { flex: 1; border: 1px solid var(--line, rgba(0,0,0,0.15)); border-radius: 10px; padding: 0.4rem 0.6rem; font-size: 13px; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .edit-row-input:focus { outline: none; transform: scale(1.02); box-shadow: 0 4px 12px rgba(60,30,50,0.12); border-color: var(--c1); }
+
+  /* ---------- Wunsch-Karte ---------- */
+  .wish-card { background: var(--grad-wish); border-radius: 22px; padding: 1.1rem 1.2rem; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 14px 30px rgba(217,143,190,0.3); }
+  .wish-txt { font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 16px; color: #3A2350; line-height: 1.3; }
+  .wish-stars-row { margin-top: 6px; }
+  .star-btn { font-size: 17px; color: rgba(58,35,80,0.2); }
+  .star-btn.filled { color: #3A2350; }
+
+  /* ---------- Wunschliste (voll) ---------- */
+  .wish-full-card { background: white; border-radius: 18px; padding: 1rem 1.1rem; margin-bottom: 10px; box-shadow: var(--shadow-card); border-left: 4px solid var(--rowc, var(--c3)); }
+  .wish-full-child { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.5; }
+  .wish-full-txt { font-family: var(--font-display); font-weight: 700; font-style: italic; font-size: 16px; color: var(--ink); margin-top: 3px; }
+
+  /* ---------- Stack Pile ---------- */
+  .stack-pile { width: 100%; margin-top: 6px; padding: 0.8rem; background: #F1E7DD; border-radius: 14px; text-align: center; font-size: 12px; font-weight: 700; color: var(--ink-soft); box-shadow: var(--shadow-card); }
+
+  /* ---------- Toggle-Switch ---------- */
+  .switch-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: white; border-radius: 16px; padding: 0.9rem 1.05rem; margin-bottom: 9px; box-shadow: var(--shadow-card); }
+  .switch-label { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .switch-sub { font-size: 11px; opacity: 0.55; margin-top: 2px; }
+  .switch { width: 44px; height: 25px; border-radius: 999px; background: #E4DCEE; position: relative; flex-shrink: 0; transition: background 0.15s ease; }
+  .switch.on { background: var(--grad-btn); }
+  .switch .knob { position: absolute; top: 2.5px; left: 3px; width: 20px; height: 20px; border-radius: 999px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.25); transition: transform 0.15s ease; }
+  .switch.on .knob { transform: translateX(19px); }
+
+  /* ---------- Karte ---------- */
+  #leaflet-map { width: 100%; height: 220px; border-radius: 18px; box-shadow: var(--shadow-card); overflow: hidden; }
+  .place-row { display: flex; align-items: center; gap: 10px; background: white; border-radius: 14px; padding: 0.7rem 0.9rem; margin-bottom: 8px; box-shadow: var(--shadow-card); }
+  .place-emoji { font-size: 18px; }
+  .place-name { font-size: 13px; font-weight: 700; color: var(--ink); flex: 1; }
+
+  /* ---------- Chat ---------- */
+  .bubble-row { margin-bottom: 10px; }
+  .bubble { max-width: 82%; border-radius: 16px; padding: 0.6rem 0.85rem; font-size: 13px; line-height: 1.45; background: white; box-shadow: var(--shadow-card); position: relative; }
+  .bubble.own { background: var(--grad-btn); color: white; margin-left: auto; }
+  .bubble-meta { font-size: 9px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; font-weight: 700; }
+  .bubble-actions { display: flex; gap: 4px; margin-top: 4px; align-items: center; }
+  .reaction-btn { font-size: 11px; background: rgba(0,0,0,0.06); border-radius: 999px; padding: 0.15rem 0.5rem; }
+  .bubble.own .reaction-btn { background: rgba(255,255,255,0.25); }
+  /* ---------- Wochenrückblick ---------- */
+  .recap-card { background: white; border-radius: 20px; padding: 1.1rem 1.2rem; box-shadow: var(--shadow-card); }
+  .recap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 0; }
+  .week-strip { background: white; border-radius: 18px; padding: 0.95rem 1.1rem; box-shadow: var(--shadow-card); margin-top: 1.6rem; }
+  .week-strip-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.5; margin-bottom: 8px; }
+  .section-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 0.7rem; }
+  .section-title-sm { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--ink); margin: 0; white-space: nowrap; }
+  .floating-field-sm { background: white; border-radius: 999px; box-shadow: var(--shadow-card); padding: 0.4rem 0.4rem 0.4rem 0.8rem; display: flex; align-items: center; gap: 6px; flex: 1; max-width: 220px; }
+  .floating-field-sm input { border: none; outline: none; flex: 1; font-size: 12px; background: transparent; min-width: 0; }
+  .floating-field-sm .icon-btn { width: 24px; height: 24px; font-size: 10px; }
+  .recap-item { text-align: center; }
+  .recap-num { font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--c4); }
+  .recap-label { font-size: 9px; opacity: 0.6; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ---------- Bottom Nav ---------- */
+  .bottom-nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 2px; background: var(--ink); padding: 6px; border-radius: 999px; box-shadow: 0 16px 34px rgba(36,27,58,0.35); z-index: 20; max-width: 94%; overflow-x: auto; }
+  .bottom-nav::-webkit-scrollbar { display: none; }
+  .nav-item { padding: 0.55rem 0.85rem; border-radius: 999px; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .nav-item.active { background: var(--grad-btn); color: white; box-shadow: 0 6px 14px rgba(217,98,140,0.35); }
+
+  /* ---------- Modale ---------- */
+  .modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; background: rgba(36,27,58,0.55); backdrop-filter: blur(4px); overflow-y: auto; }
+  .modal-card { width: 100%; max-width: 400px; background: white; border-radius: 24px; box-shadow: var(--shadow-pop); padding: 1.6rem; position: relative; max-height: 88vh; overflow-y: auto; }
+  .close-btn { width: 28px; height: 28px; border-radius: 999px; background: var(--ink); color: white; }
+  .avatar-pick-btn { width: 40px; height: 40px; border-radius: 999px; font-size: 18px; display: grid; place-items: center; background: #F5EEE6; }
+  .avatar-pick-btn.selected { background: var(--grad-btn); }
+
+  /* ---------- Konfetti ---------- */
+  .confetti-piece { position: fixed; top: -10px; width: 8px; height: 8px; border-radius: 2px; z-index: 60; pointer-events: none; animation: confetti-fall 1.1s ease-in forwards; }
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(340px) rotate(420deg); opacity: 0; }
+  }
+
+  /* ---------- Sonstiges ---------- */
+  .btn { padding: 0.55rem 1rem; border-radius: 999px; font-size: 12px; font-weight: 700; background: white; box-shadow: var(--shadow-card); color: var(--ink); }
+  .btn.primary { background: var(--grad-btn); color: white; }
+  .btn.full { width: 100%; }
+  .legal-note { margin-top: 1.2rem; padding: 0.9rem 1rem; border-radius: 14px; background: white; font-size: 11px; line-height: 1.6; box-shadow: var(--shadow-card); }
+  .footer-note { margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px dashed rgba(0,0,0,0.12); font-size: 10px; line-height: 1.6; opacity: 0.55; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+</style>
+
+<style>
+  body { margin:0; background:var(--cream); font-family: var(--font-body); font-weight:500; color:var(--ink-soft); }
+  .legal-page { max-width: 480px; margin: 0 auto; padding: calc(2rem + env(safe-area-inset-top, 0px)) 1.3rem 4rem; }
+  .legal-back { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--ink); text-decoration:none; margin-bottom:1.5rem; }
+  .legal-page h1 { font-family: var(--font-body); font-weight:700; font-size:26px; color:var(--ink); }
+  .legal-page h2 { font-family: var(--font-body); font-weight:700; font-size:17px; color:var(--ink); margin-top:1.6rem; }
+  .legal-page p { font-size:14px; line-height:1.7; }
+  .legal-page a { color: var(--c4); }
+</style>
+
+</head>
+<body>
+  <div class="legal-page">
+    <a class="legal-back" href="index.html">← Zurück zur App</a>
+    <h1>Datenschutzerklärung</h1>
+
+<p><b>Kurzfassung:</b> FamLumi läuft komplett lokal auf deinem Gerät. Es gibt aktuell keinen Server, der eure Daten sammelt.</p>
+
+<h2>Welche Daten werden gespeichert?</h2>
+<p>Aufgaben, Kalender-Termine, Chat-Nachrichten und der "Zuhause/unterwegs"-Status werden ausschließlich im lokalen Speicher deines Browsers (localStorage) abgelegt. Diese Daten verlassen dein Gerät nicht, außer du nutzt aktiv die Funktion "Sichern" (Backup-Datei) oder richtest den optionalen Cloud-Sync ein. Welches Familienmitglied du auf diesem Gerät bist, wird ebenfalls nur lokal gespeichert (kein Passwort, keine echte Anmeldung – nur eine Zuordnung "das bin ich").</p>
+
+<h2>Standort</h2>
+<p>Es wird kein GPS und keine echte Standortposition erfasst. Der "Unterwegs"-Status ist ein von Hand gesetzter Schalter ("zu Hause" / "unterwegs"), keine automatische Ortung.</p>
+
+<p>Für die Kartenansicht im Karte-Tab gibt es einen Schalter ("Standort teilen"), der standardmäßig <b>ausgeschaltet</b> ist und jederzeit selbst umgeschaltet werden kann. Jede Person sieht und ändert dort ausschließlich ihre eigene Freigabe – nicht die der anderen Familienmitglieder. Solange diese Funktion nicht aktiv genutzt wird, wird kein Standort erfasst oder geteilt. Beim Öffnen des Karte-Tabs fragt die App einmalig den aktuellen Standort ab (nicht dauerhaft), nur um die eigene Kartenansicht zu zentrieren; dieser Wert wird nicht gespeichert und nicht an Dritte übermittelt.</p>
+
+<h2>Benachrichtigungen</h2>
+<p>Im Hinweise-Tab lässt sich optional ein Schalter für Benachrichtigungen aktivieren (standardmäßig <b>ausgeschaltet</b>). Bei Aktivierung fragt das Gerät einmalig die übliche Benachrichtigungs-Berechtigung ab. Neue Aufgaben, Termine und Chat-Nachrichten anderer Familienmitglieder werden dann direkt auf dem Gerät angezeigt, solange die App geöffnet oder im Hintergrund aktiv ist. Es findet dabei keine Verbindung zu einem externen Push-Dienst statt – die Benachrichtigung wird ausschließlich lokal auf dem Gerät erzeugt, es werden keine Daten dafür an Dritte übermittelt.</p>
+
+<h2>Rechtsgrundlage</h2>
+<p>Die Verarbeitung erfolgt auf Grundlage deiner Einwilligung bzw. im berechtigten Interesse der Nutzung als privates Familienwerkzeug, Art. 6 Abs. 1 lit. a, f DSGVO.</p>
+
+<h2>Schriftarten</h2>
+<p>FamLumi lädt keine Schriften von externen Servern nach. Es werden ausschließlich Schriften genutzt, die bereits auf dem jeweiligen Gerät (iOS/Android) vorinstalliert sind. Dadurch entsteht keine Verbindung zu Google- oder anderen Dritt-Servern beim Laden der App, und es wird auch keine IP-Adresse zu diesem Zweck übertragen.</p>
+
+<h2>Hosting</h2>
+<p>Die App wird statisch über GitHub Pages ausgeliefert. Es gelten die Datenschutzhinweise von GitHub für den reinen Seitenaufruf (Server-Logs).</p>
+
+<h2>Drittanbieter-Dienste & Lizenzen</h2>
+<p>Diese Dienste werden nur bei aktiver Nutzung der jeweiligen Funktion angefragt, nie im Hintergrund:</p>
+<p><b>OpenStreetMap / Leaflet</b> (Karte-Tab): Kartenkacheln von tile.openstreetmap.org, Quellenangabe "© OpenStreetMap-Mitwirkende" wird automatisch sichtbar eingeblendet (Pflicht der OSM-Nutzungsrichtlinie). Es werden nur die gerade sichtbaren Kartenausschnitte geladen, kein Offline-Download im Voraus. Die Kartenbibliothek Leaflet selbst steht unter der sehr freizügigen BSD-2-Clause-Lizenz.</p>
+<p><b>Firebase Realtime Database</b> (optionaler Geräte-Sync, Google): Nur aktiv, wenn eigene, selbst angelegte Firebase-Zugangsdaten in der App hinterlegt werden. Der kostenlose Spark-Tarif ist ausdrücklich für private/Hobby-Projekte dieser Größenordnung vorgesehen. Da du dabei ein eigenes Google-Konto/Projekt nutzt, gelten dafür die Nutzungsbedingungen von Google gegenüber dir direkt, nicht gegenüber der App.</p>
+  </div>
+</body>
+</html>
