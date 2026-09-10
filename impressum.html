@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Impressum – FamLumi</title>
+<style>
+  /* Design-Tokens synchron mit index.html gehalten (gleiche Farben, gleicher
+     Font-Stack), damit Impressum/Datenschutz sich visuell nahtlos in die App
+     einfügen statt wie eine andere App zu wirken. Dunkelmodus liest denselben
+     localStorage-Wert wie die App, damit die Rechtsseiten nicht plötzlich
+     hell aufblitzen, wenn man sie aus dem Dunkelmodus heraus öffnet. */
+  :root {
+    --cream: #E7ECF6;
+    --ink: #2E3448;
+    --ink-soft: #525E80;
+    --c4: #FF8C00;
+    --font-body: -apple-system, "SF Pro Text", sans-serif;
+  }
+  html[data-theme="dark"] {
+    --cream: #122B2E;
+    --ink: #E7F3F2;
+    --ink-soft: #9DBEBC;
+    --c4: #FFA020;
+  }
+</style>
+<script>
+  try {
+    if (localStorage.getItem("famlumi_theme") === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  } catch (e) {}
+</script>
+
+<style>
+  body { margin:0; background:var(--cream); font-family: var(--font-body); font-weight:500; color:var(--ink-soft); }
+  .legal-page { max-width: 480px; margin: 0 auto; padding: calc(2rem + env(safe-area-inset-top, 0px)) 1.3rem 4rem; }
+  .legal-back { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--ink); text-decoration:none; margin-bottom:1.5rem; }
+  .legal-page h1 { font-family: var(--font-body); font-weight:700; font-size:26px; color:var(--ink); }
+  .legal-page h2 { font-family: var(--font-body); font-weight:700; font-size:17px; color:var(--ink); margin-top:1.6rem; }
+  .legal-page p { font-size:14px; line-height:1.7; }
+  .legal-page a { color: var(--c4); }
+</style>
+
+</head>
+<body>
+  <div class="legal-page">
+    <a class="legal-back" href="index.html">← Zurück zur App</a>
+    <h1>Impressum</h1>
+
+<p>Angaben gemäß § 5 DDG</p>
+
+<p>Jan Dierlich</p>
+<p>Steenacker 33</p>
+<p>25499 Tangstedt</p>
+
+<p>E-Mail: jandierlich@googlemail.com</p>
+<p>Telefon: +49 162 7112283</p>
+
+<p>Privates, nicht-kommerzielles Familienprojekt. Kein Angebot für Dritte, keine Umsatzabsicht.</p>
+
+<p>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV: Jan Dierlich (Anschrift wie oben).</p>
+
+<h2>Eingesetzte Software-Bibliotheken</h2>
+<p>Zur Kartendarstellung im Karte-Bereich wird bei aktiver Nutzung die Bibliothek Leaflet (BSD-2-Clause-Lizenz) unverändert per CDN eingebunden, Kartendaten © OpenStreetMap-Mitwirkende (ODbL 1.0). Beim optionalen Cloud-Sync wird das Firebase-SDK von Google (Apache-2.0-Lizenz) nachgeladen und die Firebase Realtime Database des jeweils eigenen, selbst angelegten Familien-Projekts genutzt – siehe Datenschutzerklärung.</p>
+  </div>
+</body>
+</html>

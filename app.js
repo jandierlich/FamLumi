@@ -1,0 +1,1939 @@
+// Diese Datei ist eine automatisiert aus der index.html regenerierte,
+// rein lesbare Referenzkopie der App-Logik (identisch zum Inline-Code in
+// index.html). Sie wird zur Laufzeit NICHT geladen (index.html funktioniert
+// dadurch weiterhin offline/per Doppelklick) und darf nicht von Hand
+// bearbeitet werden - Änderungen bitte immer in index.html vornehmen.
+
+// ============================================================
+// FamLumi — App-Logik OHNE externe Abhängigkeiten (reines JavaScript)
+// Kein React, kein Babel, kein CDN nötig für die Kernfunktionen.
+// ============================================================
+
+// ---------- Grunddaten ----------
+
+const CODE_WORDS = ["SONNE", "MOND", "STERN", "WOLKE", "HERZ", "HAUS", "LICHT", "FLUSS", "WALD", "BLUME"];
+const CONFETTI_COLORS = ["#12766C", "#0B4F49", "#3FBFAE", "#0E5F57"];
+const DEFAULT_MEMBERS = [
+  { id: "p1", name: "Mitglied 1", color: "var(--c1)" },
+  { id: "p2", name: "Mitglied 2", color: "var(--c2)" },
+  { id: "p3", name: "Mitglied 3", color: "var(--c3)" },
+];
+
+const VISIBLE_COUNT = 10;
+const STORAGE_KEY = "famlumi_data_v4";
+const CODE_KEY = "famlumi_family_code";
+const ONBOARDING_KEY = "famlumi_onboarding_seen";
+const THEME_KEY = "famlumi_theme";
+const FIREBASE_CONFIG_KEY = "famlumi_firebase_config";
+const LOGIN_KEY = "famlumi_logged_in_member";
+const SEEN_ACTIVITY_KEY = "famlumi_seen_activity";
+const NOTIF_ENABLED_KEY = "famlumi_notifications_enabled";
+
+let creationCounter = Date.now();
+function nextId(prefix) { creationCounter += 1; return prefix + creationCounter; }
+function nextTimestamp() { creationCounter += 1; return creationCounter; }
+
+function defaultData() {
+  // Bewusst KEINE Beispiel-Inhalte mehr - alle Listen starten leer und
+  // füllen sich ausschließlich durch das, was die Familie selbst einträgt.
+  return {
+    members: JSON.parse(JSON.stringify(DEFAULT_MEMBERS)),
+    tasks: [],
+    events: [],
+    chat: [],
+    status: [
+      { who: "p1", unterwegs: false, shareLocation: false, online: false },
+      { who: "p2", unterwegs: false, shareLocation: false, online: false },
+      { who: "p3", unterwegs: false, shareLocation: false, online: false },
+    ],
+  };
+}
+
+// Icons als schlichte Strich-SVGs (currentColor) statt bunter Emoji, damit die
+// Bereichs-Icons auf der Startseite wirklich einfarbig sind (Emoji lassen sich
+// per CSS nicht umfärben - Vorbild: die Linien-Icons von NarzissmusWahr).
+const ICON_HEUTE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>`;
+const ICON_AUFGABEN = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+const ICON_KALENDER = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`;
+const ICON_CHAT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`;
+const ICON_KARTE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-7.58 7-12A7 7 0 0 0 5 10c0 4.42 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>`;
+const ICON_HINWEISE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+
+// Weitere einheitliche Strich-Icons (ersetzen die frueheren Emoji app-weit)
+const ICON_SOUND_ON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>`;
+const ICON_SOUND_OFF = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M23 9l-6 6M17 9l6 6"/></svg>`;
+const ICON_SUN = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>`;
+const ICON_MOON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`;
+const ICON_REPEAT = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2.5 21 6l-4 3.5"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 21.5 3 18l4-3.5"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`;
+const ICON_HEART = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6c0 5-8.8 10.4-8.8 10.4S3.2 13.6 3.2 8.6a5 5 0 0 1 9-3 5 5 0 0 1 8.6 3z"/></svg>`;
+const ICON_HEART_FILLED = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.8 8.6c0 5-8.8 10.4-8.8 10.4S3.2 13.6 3.2 8.6a5 5 0 0 1 9-3 5 5 0 0 1 8.6 3z"/></svg>`;
+const ICON_CAMERA = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+const ICON_MIC = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4M8 22h8"/></svg>`;
+const ICON_DOOR = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21V4a1 1 0 0 1 1.2-1l7 1.4A1 1 0 0 1 18 5.4V21"/><path d="M9 21h11M4 21h2"/><circle cx="14.2" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg>`;
+const ICON_DOWNLOAD = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>`;
+const ICON_UPLOAD = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 19h16"/></svg>`;
+const ICON_CLOUD = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4 2A4 4 0 0 0 6.5 19h11z"/></svg>`;
+const ICON_DEVICE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>`;
+const ICON_DOC = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>`;
+const ICON_LOCK = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M7.5 10.5V7a4.5 4.5 0 0 1 9 0v3.5"/></svg>`;
+const ICON_SCALE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 21h10"/><path d="M4 7l3.5-2L11 7M4 7l3.5 5L11 7M17 7l3.5-2L24 7"/><path d="M13 7l3.5 5L20 7"/></svg>`;
+const ICON_TRASH = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>`;
+const ICON_ARCHIVE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 13h4"/></svg>`;
+const ICON_STOP = `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`;
+const ICON_TRAY = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4.5l1.5 3h6l1.5-3H21"/><path d="M5.5 5h13L21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6z"/></svg>`;
+
+// Kleine, einfarbige Illustration für leere Listen statt Text ohne jedes
+// Element (ruhiger als Emoji, aber nicht komplett kahl).
+function emptyState(icon, text, extraStyle) {
+  return `<div class="empty-state"${extraStyle ? ` style="${extraStyle}"` : ""}><span class="empty-state-icon">${icon}</span>${text}</div>`;
+}
+
+const TABS = [
+  { key: "heute", label: "Heute", icon: ICON_HEUTE, color: "var(--c1)" },
+  { key: "aufgaben", label: "Aufgaben", icon: ICON_AUFGABEN, color: "var(--c6)" },
+  { key: "kalender", label: "Kalender", icon: ICON_KALENDER, color: "var(--c4)" },
+  { key: "chat", label: "Chat", icon: ICON_CHAT, color: "var(--c3)" },
+  { key: "karte", label: "Karte", icon: ICON_KARTE, color: "var(--c5)" },
+  { key: "hinweise", label: "Hinweise", icon: ICON_HINWEISE, color: "var(--c7)" },
+];
+
+// ---------- Zustand ----------
+
+let state = defaultData();
+let ui = {
+  activeTab: "heute",
+  familyCode: null,
+  showSettingsModal: false,
+  settingsMandatory: false, // erstes Setup: nicht schließbar, bis abgeschlossen
+  settingsSelf: null, // im Setup gewähltes "das bin ich"
+  showInstallModal: false,
+  showOnboarding: false,
+  showSyncModal: false,
+  showReloginModal: false,
+  myLocation: null, // { lat, lon } - einmalig fürs Zentrieren der Karte, wird nicht gespeichert
+  locationRequested: false, // verhindert Mehrfach-Anfrage; wird beim ersten Öffnen des Karte-Tabs gesetzt
+  editing: null, // { type: 'task'|'event', id }
+  showAllTasks: false,
+  showAllChat: false,
+  theme: "light",
+  syncStatus: "off", // "off" | "connected" | "error"
+  loggedInMemberId: null,
+  mapExpanded: false,
+  seenActivityIds: new Set(),
+  notificationsEnabled: false,
+  calendarYear: new Date().getFullYear(),
+  calendarMonth: new Date().getMonth(), // 0-basiert
+  calendarSelectedDate: todayDateStr(),
+  quickAdd: null, // "aufgaben" | "kalender" | "chat" | null – per Kachel-Lang-Druck geöffnet
+  newTaskRepeat: "none",
+  showFairness: false,
+  newEventRepeat: "none",
+  recordingVoice: false,
+  pendingChatImage: null, // { dataUrl } – Foto ausgewählt, wartet auf Bildunterschrift + Senden
+};
+
+// ---------- Hilfsfunktionen ----------
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+function sortNewestFirst(items) { return [...items].sort((a, b) => b.createdAt - a.createdAt); }
+function splitVisible(items, count) { return { visible: items.slice(0, count), hidden: items.slice(count) }; }
+function eventDateTime(ev) { return new Date((ev.occurrenceDate || ev.date) + "T" + (ev.timeFrom || ev.time || "00:00")); }
+function eventSpanDays(ev) {
+  if (!ev.endDate || ev.endDate <= ev.date) return 1;
+  const start = new Date(ev.date + "T00:00");
+  const end = new Date(ev.endDate + "T00:00");
+  return Math.round((end - start) / 86400000) + 1;
+}
+function addDaysStr(dateStr, days) { const d = new Date(dateStr + "T00:00"); d.setDate(d.getDate() + days); return dateToStr(d); }
+function addMonthsStr(dateStr, months) { const d = new Date(dateStr + "T00:00"); d.setMonth(d.getMonth() + months); return dateToStr(d); }
+function addYearsStr(dateStr, years) { const d = new Date(dateStr + "T00:00"); d.setFullYear(d.getFullYear() + years); return dateToStr(d); }
+// Liefert die Start-Daten aller Vorkommen eines (ggf. wiederkehrenden,
+// ggf. mehrtägigen) Termins, die im Bereich [rangeStartStr, rangeEndStr]
+// beginnen oder hineinragen. Sicherheitsbegrenzung bei 400 Wiederholungen.
+function eventOccurrenceStarts(ev, rangeStartStr, rangeEndStr) {
+  const spanDays = eventSpanDays(ev);
+  const results = [];
+  const rangeStart = new Date(rangeStartStr + "T00:00");
+  const rangeEnd = new Date(rangeEndStr + "T00:00");
+  if (!ev.repeat || ev.repeat === "none") {
+    const occStart = new Date(ev.date + "T00:00");
+    const occEnd = new Date(occStart); occEnd.setDate(occEnd.getDate() + spanDays - 1);
+    if (occEnd >= rangeStart && occStart <= rangeEnd) results.push(ev.date);
+    return results;
+  }
+  let cur = ev.date, guard = 0;
+  while (guard < 400) {
+    guard++;
+    const occStart = new Date(cur + "T00:00");
+    if (occStart > rangeEnd) break;
+    const occEnd = new Date(occStart); occEnd.setDate(occEnd.getDate() + spanDays - 1);
+    if (occEnd >= rangeStart) results.push(cur);
+    if (ev.repeat === "weekly") cur = addDaysStr(cur, 7);
+    else if (ev.repeat === "monthly") cur = addMonthsStr(cur, 1);
+    else if (ev.repeat === "yearly") cur = addYearsStr(cur, 1);
+    else break;
+  }
+  return results;
+}
+function eventTimeLabel(ev) {
+  const from = ev.timeFrom || ev.time || "";
+  if (!from) return "Ganztägig";
+  return ev.timeTo ? `${from}–${ev.timeTo} Uhr` : `${from} Uhr`;
+}
+function formatEventDate(ev) {
+  const startStr = ev.occurrenceDate || ev.date;
+  const span = eventSpanDays(ev);
+  const d = new Date(startStr + "T00:00");
+  const dateTxt = d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+  if (span > 1) {
+    const endD = new Date(startStr + "T00:00"); endD.setDate(endD.getDate() + span - 1);
+    const endTxt = endD.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return `${dateTxt} – ${endTxt}`;
+  }
+  const from = ev.timeFrom || ev.time;
+  return from ? `${dateTxt} · ${from}${ev.timeTo ? "–" + ev.timeTo : ""}` : dateTxt;
+}
+function eventEndOfRelevance(ev) {
+  const startStr = ev.occurrenceDate || ev.date;
+  const span = eventSpanDays(ev);
+  const endD = new Date(startStr + "T00:00"); endD.setDate(endD.getDate() + span - 1);
+  return new Date(dateToStr(endD) + "T" + (ev.timeFrom || ev.time || "23:59:59"));
+}
+function sortByDateAsc(items) { return [...items].sort((a, b) => eventDateTime(a) - eventDateTime(b)); }
+function nextEvent() {
+  const now = new Date();
+  const todayStr = todayDateStr();
+  const farStr = addDaysStr(todayStr, 400);
+  const candidates = [];
+  state.events.forEach((ev) => {
+    eventOccurrenceStarts(ev, todayStr, farStr).forEach((occDate) => {
+      const occ = Object.assign({}, ev, { occurrenceDate: occDate });
+      if (eventEndOfRelevance(occ) >= now) candidates.push(occ);
+    });
+  });
+  if (!candidates.length) return null;
+  return sortByDateAsc(candidates)[0];
+}
+// Liefert die nächsten `limit` bevorstehenden Termin-Vorkommen (auch aus
+// wiederkehrenden Terminen), sortiert nach Datum - Basis für die
+// "Nächste Termine"-Liste auf der Kalenderseite.
+function upcomingEvents(limit) {
+  const now = new Date();
+  const todayStr = todayDateStr();
+  const farStr = addDaysStr(todayStr, 400);
+  const candidates = [];
+  state.events.forEach((ev) => {
+    eventOccurrenceStarts(ev, todayStr, farStr).forEach((occDate) => {
+      const occ = Object.assign({}, ev, { occurrenceDate: occDate });
+      if (eventEndOfRelevance(occ) >= now) candidates.push(occ);
+    });
+  });
+  return sortByDateAsc(candidates).slice(0, limit);
+}
+
+// ---------- Kalender-Hilfsfunktionen (echte Monatsansicht) ----------
+const MONTH_NAMES_DE = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const WEEKDAY_LABELS_DE = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+function pad2(n) { return String(n).padStart(2, "0"); }
+function dateToStr(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function todayDateStr() { return dateToStr(new Date()); }
+function daysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
+// JS getDay(): 0=So..6=Sa. Wir wollen Montag als ersten Wochentag (0=Mo..6=So).
+function mondayIndex(weekday) { return (weekday + 6) % 7; }
+// Termine an einem bestimmten Tag - berücksichtigt Wiederholungen und
+// mehrtägige Termine (Zeitraum-Überschneidung), nicht nur exaktes ev.date.
+function eventsOnDate(dateStr) {
+  const items = [];
+  state.events.forEach((ev) => {
+    eventOccurrenceStarts(ev, dateStr, dateStr).forEach((occDate) => {
+      items.push(Object.assign({}, ev, { occurrenceDate: occDate }));
+    });
+  });
+  return sortByDateAsc(items);
+}
+function formatSelectedDayLabel(dateStr) {
+  const d = new Date(dateStr + "T00:00");
+  return d.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+}
+function memberById(id) { return state.members.find((m) => m.id === id) || { name: id, color: "var(--c1)" }; }
+// Berechnet für alle Mitglieder ihr Kürzel; bei gleichem Anfangsbuchstaben
+// (z.B. "Papa" und "Paul") wird automatisch ein weiterer Buchstabe ergänzt,
+// damit die Kürzel eindeutig bleiben statt beide nur "P" zu zeigen.
+function memberInitials() {
+  const used = new Set();
+  const map = {};
+  state.members.forEach((m) => {
+    const name = (m.name || "?").trim() || "?";
+    let len = 1;
+    let candidate = name.slice(0, len).toUpperCase();
+    while (used.has(candidate) && len < name.length) {
+      len++;
+      candidate = name.slice(0, len).toUpperCase();
+    }
+    if (used.has(candidate)) {
+      const base = candidate;
+      let n = 2;
+      while (used.has(candidate)) { candidate = base + n; n++; }
+    }
+    used.add(candidate);
+    map[m.id] = candidate;
+  });
+  return map;
+}
+function memberInitial(m) { return escapeHtml((memberInitials()[m && m.id] || (m && m.name ? m.name.trim().charAt(0).toUpperCase() : "?") || "?")); }
+function statusById(id) { return state.status.find((s) => s.who === id); }
+function greetingForNow() {
+  const h = new Date().getHours();
+  if (h < 11) return "Guten Morgen, ihr Lieben";
+  if (h < 17) return "Schönen Tag, ihr Lieben";
+  if (h < 22) return "Schönen Abend, ihr Lieben";
+  return "Gute Nacht, ihr Lieben";
+}
+function generateFamilyCode() {
+  const word = CODE_WORDS[Math.floor(Math.random() * CODE_WORDS.length)];
+  return `${word}-${Math.floor(1000 + Math.random() * 9000)}`;
+}
+function loadSavedData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* z.B. privater Modus */ }
+}
+
+function burstConfetti(originEl) {
+  if (!originEl) return;
+  const rect = originEl.getBoundingClientRect();
+  for (let i = 0; i < 16; i++) {
+    const piece = document.createElement("div");
+    piece.className = "confetti-piece";
+    piece.style.left = rect.left + rect.width / 2 + (Math.random() * 60 - 30) + "px";
+    piece.style.top = rect.top + "px";
+    piece.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    piece.style.animationDelay = Math.random() * 0.15 + "s";
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 1400);
+  }
+}
+function playTapFeedback() {
+  if (navigator.vibrate) navigator.vibrate(12);
+  if (!state.soundOn) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine"; osc.frequency.value = 720;
+    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.25);
+  } catch (e) {}
+}
+
+// Einmalige, stille Standortabfrage nur fürs Zentrieren der Karte – wird erst
+// beim ersten Öffnen des Karte-Tabs ausgelöst (nicht beim App-Start), damit
+// Verhalten und Datenschutztext exakt übereinstimmen. Kein Wetter, kein
+// Speichern, keine Übermittlung an Dritte.
+function loadOwnLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      ui.myLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      if (ui.activeTab === "karte") render();
+    },
+    () => {},
+    { timeout: 6000 }
+  );
+}
+
+// ---------- Aktionen ----------
+
+const REPEAT_LABEL = { none: "einmalig", daily: "täglich", weekly: "wöchentlich", monthly: "monatlich", yearly: "jährlich" };
+
+const actions = {
+  addTask(text, repeat) {
+    if (!text.trim()) return;
+    const ts = nextTimestamp();
+    const who = ui.loggedInMemberId || state.members[0].id;
+    const id = nextId("t");
+    state.tasks.unshift({ id, text: text.trim(), who, done: false, completedBy: null, repeat: repeat || "none", createdAt: ts, updatedAt: ts });
+    saveData();
+    lastAddedId = id;
+    render();
+    lastAddedId = null;
+  },
+  toggleChecked(id, btnEl) {
+    const task = state.tasks.find((t) => t.id === id);
+    if (!task) return;
+    if (!task.done) {
+      burstConfetti(btnEl);
+      playTapFeedback();
+      task.done = true; task.updatedAt = Date.now();
+      task.completedBy = ui.loggedInMemberId || state.members[0].id;
+      // Wiederkehrende Aufgabe: sofort die nächste offene Ausgabe anlegen,
+      // die erledigte bleibt als Verlauf stehen.
+      if (task.repeat && task.repeat !== "none") {
+        const ts = nextTimestamp();
+        state.tasks.unshift({ id: nextId("t"), text: task.text, who: task.who, done: false, completedBy: null, repeat: task.repeat, createdAt: ts, updatedAt: ts });
+      }
+    } else {
+      task.done = false; task.completedBy = null; task.updatedAt = Date.now();
+    }
+    saveData();
+    lastToggledTaskId = id;
+    render();
+    lastToggledTaskId = null;
+  },
+  startEditTask(id) { ui.editing = { type: "task", id }; render(); },
+  saveEditTask(id) {
+    const val = document.getElementById("edit-inline-input");
+    const task = state.tasks.find((t) => t.id === id);
+    if (task && val) { task.text = val.value; task.updatedAt = Date.now(); }
+    ui.editing = null; saveData(); render();
+  },
+  cancelEdit() { ui.editing = null; render(); },
+  deleteTask(id) { actions.deleteWithUndo("task", id); },
+  expandTasks() { ui.showAllTasks = true; render(); },
+  setTaskRepeat(r) { ui.newTaskRepeat = r; render(); },
+  toggleFairness() { ui.showFairness = !ui.showFairness; render(); },
+
+  addEvent(title, date, timeFrom, timeTo, endDate, repeat) {
+    if (!title.trim() || !date) return;
+    const ts = nextTimestamp();
+    const who = ui.loggedInMemberId || state.members[0].id;
+    const id = nextId("e");
+    state.events.push({ id, title: title.trim(), date, endDate: endDate && endDate > date ? endDate : "", timeFrom: timeFrom || "", timeTo: timeTo || "", repeat: repeat || "none", who, createdAt: ts, updatedAt: ts });
+    saveData();
+    lastAddedId = id;
+    ui.newEventRepeat = "none";
+    render();
+    lastAddedId = null;
+  },
+  setEventRepeat(r) { ui.newEventRepeat = r; render(); },
+  // Termine können von jedem Familienmitglied bearbeitet und gelöscht werden.
+  // Bei wiederkehrenden Terminen wirken Bearbeiten/Löschen auf die ganze Serie.
+  startEditEvent(id) { ui.editing = { type: "event", id }; render(); },
+  saveEditEvent(id) {
+    const titleVal = document.getElementById("edit-event-title");
+    const dateVal = document.getElementById("edit-event-date");
+    const endDateVal = document.getElementById("edit-event-end-date");
+    const fromVal = document.getElementById("edit-event-time-from");
+    const toVal = document.getElementById("edit-event-time-to");
+    const ev = state.events.find((e) => e.id === id);
+    if (ev && titleVal && titleVal.value.trim() && dateVal && dateVal.value) {
+      ev.title = titleVal.value.trim(); ev.date = dateVal.value;
+      ev.endDate = endDateVal && endDateVal.value && endDateVal.value > ev.date ? endDateVal.value : "";
+      ev.timeFrom = fromVal ? fromVal.value : ""; ev.timeTo = toVal ? toVal.value : "";
+      delete ev.time; // altes Einzel-Zeitfeld-Format bereinigen
+      ev.updatedAt = Date.now();
+    }
+    ui.editing = null; saveData(); render();
+  },
+  deleteEvent(id) { actions.deleteWithUndo("event", id); },
+  calPrevMonth() {
+    ui.calendarMonth -= 1;
+    if (ui.calendarMonth < 0) { ui.calendarMonth = 11; ui.calendarYear -= 1; }
+    calendarSlideDir = "right";
+    render();
+    calendarSlideDir = null;
+  },
+  calNextMonth() {
+    ui.calendarMonth += 1;
+    if (ui.calendarMonth > 11) { ui.calendarMonth = 0; ui.calendarYear += 1; }
+    calendarSlideDir = "left";
+    render();
+    calendarSlideDir = null;
+  },
+  calSelectDay(dateStr) {
+    if (!dateStr) return;
+    ui.calendarSelectedDate = dateStr;
+    const [y, m] = dateStr.split("-").map(Number);
+    ui.calendarYear = y; ui.calendarMonth = m - 1;
+    render();
+  },
+
+  toggleUnterwegs(who) {
+    const s = statusById(who);
+    if (s) s.unterwegs = !s.unterwegs;
+    saveData(); render();
+  },
+  toggleShareLocation(who) {
+    // Nur die angemeldete Person darf ihre eigene Standortfreigabe umschalten.
+    if (who !== ui.loggedInMemberId) return;
+    const s = statusById(who);
+    if (s) s.shareLocation = !s.shareLocation;
+    saveData(); render();
+  },
+
+  sendChat(text) {
+    if (ui.pendingChatImage) {
+      const dataUrl = ui.pendingChatImage.dataUrl;
+      ui.pendingChatImage = null;
+      actions.sendChatImage(dataUrl, text);
+      return;
+    }
+    if (!text.trim()) return;
+    const sender = ui.loggedInMemberId || state.members[0].id;
+    const id = nextId("c");
+    state.chat.unshift({ id, who: sender, text: text.trim(), createdAt: nextTimestamp(), likedBy: [] });
+    saveData();
+    lastAddedId = id;
+    render();
+    lastAddedId = null;
+  },
+  sendChatImage(dataUrl, text) {
+    if (!dataUrl) return;
+    const sender = ui.loggedInMemberId || state.members[0].id;
+    const id = nextId("c");
+    state.chat.unshift({ id, who: sender, text: (text || "").trim(), image: dataUrl, createdAt: nextTimestamp(), likedBy: [] });
+    saveData();
+    lastAddedId = id;
+    render();
+    lastAddedId = null;
+  },
+  sendChatAudio(dataUrl, seconds) {
+    if (!dataUrl) return;
+    const sender = ui.loggedInMemberId || state.members[0].id;
+    const id = nextId("c");
+    state.chat.unshift({ id, who: sender, text: "", audio: dataUrl, audioSeconds: seconds || 0, createdAt: nextTimestamp(), likedBy: [] });
+    saveData();
+    lastAddedId = id;
+    render();
+    lastAddedId = null;
+  },
+  reactChat(id) {
+    const msg = state.chat.find((m) => m.id === id);
+    if (!msg) return;
+    const me = ui.loggedInMemberId || state.members[0].id;
+    if (!msg.likedBy) msg.likedBy = [];
+    const idx = msg.likedBy.indexOf(me);
+    if (idx >= 0) msg.likedBy.splice(idx, 1); else msg.likedBy.push(me);
+    saveData(); render();
+  },
+  deleteChat(id) { actions.deleteWithUndo("chat", id); },
+  expandChat() { ui.showAllChat = true; render(); },
+
+  // Foto wird vor dem Speichern client-seitig verkleinert/komprimiert (max.
+  // 900px lange Kante, JPEG ~70%), damit localStorage/Cloud-Sync nicht mit
+  // Rohfotos überlastet werden. Das Foto wird danach nur als Vorschau über
+  // dem Eingabefeld angezeigt (noch nicht verschickt) – so kann vor dem
+  // eigentlichen Senden noch eine Bildunterschrift dazugeschrieben werden.
+  compressChatImage(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxSide = 900;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ui.pendingChatImage = { dataUrl: canvas.toDataURL("image/jpeg", 0.7) };
+        render();
+        const input = document.getElementById("new-chat-input");
+        if (input) input.focus();
+      };
+      img.onerror = () => alert("Foto konnte nicht gelesen werden.");
+      img.src = reader.result;
+    };
+    reader.onerror = () => alert("Foto konnte nicht gelesen werden.");
+    reader.readAsDataURL(file);
+  },
+  clearPendingChatImage() {
+    ui.pendingChatImage = null;
+    render();
+  },
+
+  // Sprachnachricht per MediaRecorder; fragt Mikrofon-Berechtigung nur beim
+  // aktiven Antippen ab, stoppt automatisch nach max. 60s.
+  toggleVoiceRecord() {
+    if (ui.recordingVoice) { if (activeRecorder) activeRecorder.stop(); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      alert("Sprachnachrichten werden von diesem Browser nicht unterstützt.");
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      const chunks = [];
+      const rec = new MediaRecorder(stream);
+      activeRecorder = rec;
+      const startedAt = Date.now();
+      rec.ondataavailable = (ev) => { if (ev.data.size > 0) chunks.push(ev.data); };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        activeRecorder = null;
+        ui.recordingVoice = false;
+        const seconds = Math.round((Date.now() - startedAt) / 1000);
+        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+        const fr = new FileReader();
+        fr.onload = () => actions.sendChatAudio(fr.result, seconds);
+        fr.readAsDataURL(blob);
+        render();
+      };
+      rec.start();
+      ui.recordingVoice = true;
+      render();
+      setTimeout(() => { if (activeRecorder === rec && rec.state !== "inactive") rec.stop(); }, 60000);
+    }).catch(() => alert("Kein Zugriff auf das Mikrofon erhalten."));
+  },
+
+  openQuickAdd(kind) { ui.quickAdd = kind; render(); },
+  closeQuickAdd() { ui.quickAdd = null; render(); },
+  quickSave() {
+    const inp = document.getElementById("quick-add-input");
+    if (!inp || !inp.value.trim()) return;
+    const val = inp.value;
+    const kind = ui.quickAdd;
+    ui.quickAdd = null;
+    if (kind === "aufgaben") actions.addTask(val, "none");
+    else if (kind === "chat") actions.sendChat(val);
+    else if (kind === "kalender") actions.addEvent(val, todayDateStr(), "", "", "", "none");
+  },
+
+  updateMemberNamesFromForm() {
+    state.members.forEach((m) => {
+      const input = document.getElementById("member-name-" + m.id);
+      if (input) m.name = input.value.trim() || m.name;
+    });
+    saveData();
+  },
+  pickSelf(id) { actions.updateMemberNamesFromForm(); ui.settingsSelf = id; render(); },
+
+  gotoTab(key) {
+    ui.activeTab = key; ui.showAllTasks = false; ui.showAllChat = false;
+    if (key === "karte" && !ui.locationRequested) { ui.locationRequested = true; loadOwnLocation(); }
+    render();
+  },
+  openActivityItem(tab, itemId) {
+    ui.seenActivityIds.add(itemId);
+    saveSeenActivityIds();
+    actions.gotoTab(tab);
+  },
+  resetSeenActivity() {
+    ui.seenActivityIds = new Set();
+    saveSeenActivityIds();
+    render();
+  },
+  showSettings() { ui.showSettingsModal = true; ui.settingsMandatory = false; render(); },
+  closeSettings() {
+    actions.updateMemberNamesFromForm();
+    ui.showSettingsModal = false;
+    render();
+  },
+  // Erstes, verpflichtendes Setup: nicht per Backdrop/X schließbar, erst
+  // "Fertig" möglich, wenn eine Person sich selbst zugeordnet hat.
+  finishMandatorySetup() {
+    actions.updateMemberNamesFromForm();
+    if (!ui.settingsSelf) return;
+    ui.loggedInMemberId = ui.settingsSelf;
+    localStorage.setItem(LOGIN_KEY, ui.settingsSelf);
+    const s = statusById(ui.settingsSelf);
+    if (s) s.online = true;
+    ui.showSettingsModal = false;
+    ui.settingsMandatory = false;
+    saveData(); render();
+  },
+
+  showInstall() { ui.showInstallModal = true; render(); },
+  closeInstall() { ui.showInstallModal = false; render(); },
+  toggleSound() { state.soundOn = !state.soundOn; saveData(); render(); },
+  toggleNotifications() {
+    if (!("Notification" in window)) { alert("Benachrichtigungen werden von diesem Browser nicht unterstützt."); return; }
+    if (ui.notificationsEnabled) {
+      ui.notificationsEnabled = false;
+      localStorage.setItem(NOTIF_ENABLED_KEY, "0");
+      render();
+      return;
+    }
+    if (Notification.permission === "denied") {
+      alert("Benachrichtigungen sind für FamLumi in den iPhone-Einstellungen blockiert. Bitte unter Einstellungen → Mitteilungen → FamLumi erlauben und danach hier erneut antippen.");
+      return;
+    }
+    Notification.requestPermission().then((perm) => {
+      ui.notificationsEnabled = perm === "granted";
+      localStorage.setItem(NOTIF_ENABLED_KEY, ui.notificationsEnabled ? "1" : "0");
+      render();
+    });
+  },
+  expandMap() { ui.mapExpanded = true; render(); },
+  closeMapModal() { ui.mapExpanded = false; render(); },
+
+  toggleTheme() {
+    ui.theme = ui.theme === "dark" ? "light" : "dark";
+    localStorage.setItem(THEME_KEY, ui.theme);
+    document.documentElement.setAttribute("data-theme", ui.theme);
+    render();
+  },
+
+  dismissOnboarding() {
+    ui.showOnboarding = false;
+    localStorage.setItem(ONBOARDING_KEY, "1");
+    if (!ui.loggedInMemberId) {
+      ui.showSettingsModal = true;
+      ui.settingsMandatory = true;
+    }
+    render();
+  },
+
+  logout() {
+    if (!confirm("Wirklich abmelden? Du kannst dich mit dem Familien-Code jederzeit wieder anmelden.")) return;
+    const s = statusById(ui.loggedInMemberId);
+    if (s) s.online = false;
+    ui.loggedInMemberId = null;
+    localStorage.removeItem(LOGIN_KEY);
+    saveData();
+    ui.showReloginModal = true;
+    render();
+  },
+  relogin(id) {
+    ui.loggedInMemberId = id;
+    localStorage.setItem(LOGIN_KEY, id);
+    const s = statusById(id);
+    if (s) s.online = true;
+    ui.showReloginModal = false;
+    saveData(); render();
+  },
+
+  // ---------- Backup: echte Datei statt nur Zwischenablage ----------
+  downloadBackup() {
+    const payload = { ...state, familyCode: ui.familyCode, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `famlumi-backup-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+  // ---------- Kalender-Export als .ics (offener Standard, keine Drittanbieter) ----------
+  exportIcs() {
+    const icsEscape = (s) => String(s).replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+    const dstr = (d) => d.replace(/-/g, "");
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//FamLumi//DE"];
+    state.events.forEach((ev) => {
+      const span = eventSpanDays(ev);
+      const endD = new Date(ev.date + "T00:00"); endD.setDate(endD.getDate() + span); // DTEND exklusiv
+      lines.push("BEGIN:VEVENT");
+      lines.push("UID:" + ev.id + "@famlumi");
+      lines.push("SUMMARY:" + icsEscape(ev.title));
+      if (ev.timeFrom) {
+        lines.push("DTSTART:" + dstr(ev.date) + "T" + ev.timeFrom.replace(":", "") + "00");
+      } else {
+        lines.push("DTSTART;VALUE=DATE:" + dstr(ev.date));
+        lines.push("DTEND;VALUE=DATE:" + dstr(dateToStr(endD)));
+      }
+      if (ev.repeat === "weekly") lines.push("RRULE:FREQ=WEEKLY");
+      else if (ev.repeat === "monthly") lines.push("RRULE:FREQ=MONTHLY");
+      else if (ev.repeat === "yearly") lines.push("RRULE:FREQ=YEARLY");
+      lines.push("END:VEVENT");
+    });
+    lines.push("END:VCALENDAR");
+    const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "famlumi-kalender.ics";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  },
+  restoreBackupFromFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data || !Array.isArray(data.tasks)) throw new Error("Ungültiges Format");
+        if (!confirm("Backup einspielen? Das ersetzt alle aktuellen Daten auf diesem Gerät.")) return;
+        state = Object.assign(defaultData(), data);
+        saveData();
+        render();
+        alert("Backup wurde eingespielt.");
+      } catch (err) {
+        alert("Diese Datei konnte nicht gelesen werden - ist es wirklich ein FamLumi-Backup?");
+      }
+    };
+    reader.readAsText(file);
+  },
+
+  // ---------- Cloud-Sync (Firebase, optional) ----------
+  showSync() { ui.showSyncModal = true; render(); },
+  closeSync() { ui.showSyncModal = false; render(); },
+  saveSyncConfig() {
+    const textarea = document.getElementById("sync-config-input");
+    if (!textarea) return;
+    const config = parseFirebaseConfigInput(textarea.value);
+    if (!config) {
+      alert("Das sah nicht nach gültigen Firebase-Zugangsdaten aus. Bitte den ganzen Block noch einmal aus der Firebase-Konsole kopieren und einfügen.");
+      return;
+    }
+    localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(config));
+    ui.syncStatus = "connecting";
+    render();
+    initFirebaseSync();
+  },
+  disconnectSync() {
+    localStorage.removeItem(FIREBASE_CONFIG_KEY);
+    firebaseApp = null; firebaseDb = null;
+    ui.syncStatus = "off";
+    render();
+  },
+
+  // ---------- Löschen mit Rückgängig ----------
+  deleteWithUndo(kind, id) {
+    const cfg = DELETE_CONFIG[kind];
+    if (!cfg) return;
+    const arr = cfg.get();
+    const index = arr.findIndex((x) => x.id === id);
+    if (index === -1) return;
+    const item = arr[index];
+    if (pendingDelete && pendingDelete.timeoutId) clearTimeout(pendingDelete.timeoutId);
+    cfg.set(arr.filter((x) => x.id !== id));
+    saveData();
+    const timeoutId = setTimeout(() => {
+      pendingDelete = null;
+      ui.toast = null;
+      render();
+    }, 6000);
+    pendingDelete = { kind, item, index, timeoutId };
+    ui.toast = { text: `${cfg.name} „${truncateForToast(cfg.label(item))}“ gelöscht` };
+    render();
+  },
+  undoDelete() {
+    if (!pendingDelete) return;
+    const cfg = DELETE_CONFIG[pendingDelete.kind];
+    const arr = cfg.get();
+    const insertAt = Math.min(pendingDelete.index, arr.length);
+    arr.splice(insertAt, 0, pendingDelete.item);
+    cfg.set(arr);
+    saveData();
+    clearTimeout(pendingDelete.timeoutId);
+    pendingDelete = null;
+    ui.toast = null;
+    render();
+  },
+};
+
+function truncateForToast(text) {
+  const t = (text || "").trim();
+  return t.length > 34 ? t.slice(0, 34) + "…" : t;
+}
+
+// ---------- Rendering ----------
+
+function renderHeader() {
+  const avatars = state.members.map((m) => {
+    const s = statusById(m.id);
+    return `<button class="avatar-btn" data-action="show-settings" title="Namen ändern"><span class="avatar-initial-main">${memberInitial(m)}</span>${s && s.online ? '<span class="online-dot"></span>' : ""}</button>`;
+  }).join("");
+  const isHome = ui.activeTab === "heute";
+  const leftHtml = isHome
+    ? `<div class="logo"><span class="logo-fam">Fam</span><span class="logo-lumi">Lumi</span><span class="logo-dot"></span></div>`
+    : `<button class="home-btn" data-action="goto-tab" data-tab="heute" title="Zur Startseite">
+        <span class="home-btn-icon">←</span><span class="home-btn-label">Startseite</span>
+      </button>`;
+  return `
+    <div class="hero">
+      <div class="container" style="padding:0;">
+        <div class="hero-top">
+          ${leftHtml}
+          <div class="hero-top-right">
+            <button class="hero-icon-btn" data-action="toggle-sound" title="Ton">${state.soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF}</button>
+            <button class="hero-icon-btn" data-action="toggle-theme" title="Hell/Dunkel">${ui.theme === "dark" ? ICON_SUN : ICON_MOON}</button>
+            ${avatars}
+          </div>
+        </div>
+        ${isHome ? `<div class="greeting">${greetingForNow()}</div><div class="header-clock" id="header-clock">${formatClockTime(new Date())}</div>` : ""}
+      </div>
+    </div>`;
+}
+
+function formatClockTime(d) {
+  return d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " Uhr";
+}
+
+// Reihenfolge bewusst so gewählt, dass das 2-spaltige Grid (grid-auto-flow:
+// column) links Aufgaben+Kalender und rechts Karte+Chat übereinander zeigt.
+// "Hinweise" ist kein Grid-Tile mehr, sondern eine eigene volle Kachel unten.
+const NAV_TILES = ["aufgaben", "kalender", "karte", "chat"].map((k) => TABS.find((t) => t.key === k));
+const HINWEISE_TAB = TABS.find((t) => t.key === "hinweise");
+
+function tileBadgeCount(tabKey, groups) {
+  if (tabKey === "aufgaben") return groups.aufgabe.filter((i) => !ui.seenActivityIds.has(i.id) && !i.done).length;
+  if (tabKey === "kalender") return groups.termin.filter((i) => !ui.seenActivityIds.has(i.id)).length;
+  if (tabKey === "chat") return groups.chat.filter((i) => !ui.seenActivityIds.has(i.id)).length;
+  return 0;
+}
+
+let prevTileBadges = {};
+function renderTileGrid() {
+  const groups = buildActivityFeed();
+  const QUICK = { aufgaben: "aufgaben", kalender: "kalender", chat: "chat" };
+  const html = `<div class="tile-grid">${NAV_TILES.map((t) => {
+    const badge = tileBadgeCount(t.key, groups);
+    const isNew = badge > 0 && !(prevTileBadges[t.key] > 0);
+    return `<button class="app-tile" data-action="goto-tab" data-tab="${t.key}"${QUICK[t.key] ? ` data-quick="${QUICK[t.key]}"` : ""} title="${t.label}">
+      <span class="app-tile-icon-wrap">
+        <span class="app-tile-icon${isNew ? " pulse-new" : ""}">${t.icon}</span>
+      </span>
+      <span class="app-tile-text">${t.label}</span>
+      ${badge > 0 ? `<span class="app-tile-badge">${badge}</span>` : ""}
+    </button>`;
+  }).join("")}</div>`;
+  NAV_TILES.forEach((t) => { prevTileBadges[t.key] = tileBadgeCount(t.key, groups); });
+  return html;
+}
+
+const ACTIVITY_META = {
+  aufgabe: { icon: ICON_AUFGABEN, color: "var(--c6)", tab: "aufgaben", label: "Aufgabe" },
+  termin: { icon: ICON_KALENDER, color: "var(--c4)", tab: "kalender", label: "Termin" },
+  chat: { icon: ICON_CHAT, color: "var(--c3)", tab: "chat", label: "Chat" },
+};
+function buildActivityFeed() {
+  const groups = { aufgabe: [], termin: [], chat: [] };
+  state.tasks.forEach((t) => groups.aufgabe.push({ id: t.id, kind: "aufgabe", who: t.who, text: t.text, createdAt: t.createdAt, done: t.done, completedBy: t.completedBy }));
+  state.events.forEach((ev) => groups.termin.push({ id: ev.id, kind: "termin", who: ev.who, text: `${ev.title} (${formatEventDate(ev)})`, createdAt: ev.createdAt }));
+  state.chat.forEach((c) => groups.chat.push({ id: c.id, kind: "chat", who: c.who, text: c.text, createdAt: c.createdAt }));
+  Object.keys(groups).forEach((k) => groups[k].sort((a, b) => b.createdAt - a.createdAt));
+  return groups;
+}
+
+function loadSeenActivityIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(SEEN_ACTIVITY_KEY) || "[]")); } catch (e) { return new Set(); }
+}
+function saveSeenActivityIds() {
+  try { localStorage.setItem(SEEN_ACTIVITY_KEY, JSON.stringify([...ui.seenActivityIds])); } catch (e) {}
+}
+
+function renderHeuteTab() {
+  const groups = buildActivityFeed();
+  const totalCount = groups.aufgabe.length + groups.termin.length + groups.chat.length;
+  const next = nextEvent();
+  const nextEventHtml = next
+    ? `<button class="activity-row" style="--rowc:var(--c4);" data-action="goto-tab" data-tab="kalender">
+        <span class="activity-icon">${ICON_KALENDER}</span>
+        <div class="activity-body">
+          <div class="activity-who">${formatEventDate(next)}</div>
+          <div class="activity-txt">${escapeHtml(next.title)}</div>
+        </div>
+        <span style="opacity:0.35;font-size:13px;">›</span>
+      </button>`
+    : emptyState(ICON_KALENDER, "Noch kein Termin eingetragen.", "padding:0.9rem 1rem;");
+
+  const rowHtml = (item) => {
+    const meta = ACTIVITY_META[item.kind];
+    const m = memberById(item.who);
+    const isTask = item.kind === "aufgabe";
+    const unread = !ui.seenActivityIds.has(item.id);
+    const icon = isTask
+      ? `<span class="${checkCircleClass(item)}" style="--rowc:${meta.color};pointer-events:none;">${checkCircleContent(item)}</span>`
+      : `<span class="activity-icon">${meta.icon}</span>`;
+    return `<button class="activity-row" style="--rowc:${meta.color}" data-action="open-activity-item" data-tab="${meta.tab}" data-item-id="${item.id}">
+      ${icon}
+      <div class="activity-body">
+        <div class="activity-who">${escapeHtml(m.name)} · ${meta.label}</div>
+        <div class="activity-txt${unread ? " unread" : ""}">${escapeHtml(item.text)}</div>
+      </div>
+      <span style="opacity:0.35;font-size:13px;">›</span>
+    </button>`;
+  };
+
+  const PLURAL = { aufgabe: "Aufgaben", termin: "Termine", chat: "Nachrichten" };
+  const moreBtnHtml = (kind, total) => {
+    if (total <= 2) return "";
+    const meta = ACTIVITY_META[kind];
+    return `<button class="more-link" data-action="goto-tab" data-tab="${meta.tab}">Alle ${total} ${PLURAL[kind]} ansehen →</button>`;
+  };
+
+  const feedRows = ["aufgabe", "termin", "chat"].map((kind) => {
+    const items = groups[kind].slice(0, 2);
+    if (!items.length) return "";
+    return items.map(rowHtml).join("") + moreBtnHtml(kind, groups[kind].length);
+  }).join("") || emptyState(ICON_TRAY, "Noch nichts eingetragen – legt über die Kacheln oben los.");
+
+  const hinweiseTileHtml = `<div class="section-head" style="margin-top:14px;"><h2 class="section-title" style="font-size:16px;color:var(--c4);">Hinweise</h2></div>
+  <button class="app-tile" style="position:relative;min-height:54px;" data-action="goto-tab" data-tab="hinweise" title="${HINWEISE_TAB.label}">
+    <span class="app-tile-icon-wrap" style="position:absolute;left:0.7rem;top:50%;transform:translateY(-50%);">
+      <span class="app-tile-icon">${HINWEISE_TAB.icon}</span>
+    </span>
+    <span class="app-tile-text" style="flex:1;text-align:center;">Hinweise · Impressum · Datenschutz</span>
+  </button>`;
+
+  return `
+    <div class="section" style="margin-top:1.4rem;">
+      ${renderTileGrid()}
+      <div class="section-head" style="margin-top:14px;"><h2 class="section-title" style="font-size:16px;color:var(--c4);">Termine</h2></div>
+      ${nextEventHtml}
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2 class="section-title" style="font-size:16px;color:var(--c4);">Neu von der Familie</h2>
+        ${totalCount ? `<button data-action="reset-seen-activity" style="background:none;border:none;font-size:11px;font-weight:700;color:var(--ink-soft);opacity:0.65;">↺ Ungelesen</button>` : ""}
+      </div>
+      ${feedRows}
+      ${hinweiseTileHtml}
+    </div>`;
+}
+
+function checkCircleClass(task) {
+  const justToggled = lastToggledTaskId === task.id;
+  return `check-circle${task.done ? " checked" : ""}${task.done && task.completedBy ? " with-name" : ""}${justToggled ? " just-toggled" : ""}`;
+}
+function checkCircleContent(task) {
+  if (task.done && task.completedBy) {
+    const completer = memberById(task.completedBy);
+    return `<span class="check-circle-info">${escapeHtml(completer.name)}</span>`;
+  }
+  return task.done ? "✓" : "";
+}
+function renderCheckCircleButton(task, color) {
+  return `<button class="${checkCircleClass(task)}" style="--rowc:${color}" data-action="toggle-checked" data-id="${task.id}" title="Von jedem Familienmitglied abhakbar">${checkCircleContent(task)}</button>`;
+}
+
+function renderAufgabenTab() {
+  const tasks = sortNewestFirst(state.tasks);
+  const { visible, hidden } = splitVisible(tasks, VISIBLE_COUNT);
+  const shownTasks = ui.showAllTasks ? tasks : visible;
+
+  const taskRows = shownTasks.map((task) => {
+    const m = memberById(task.who);
+    const editing = ui.editing && ui.editing.type === "task" && ui.editing.id === task.id;
+    if (editing) {
+      return `<div class="task-row" style="--rowc:${m.color}">
+        <input id="edit-inline-input" class="edit-row-input" value="${escapeHtml(task.text)}" />
+        <button class="icon-btn pill-confirm" data-action="save-edit-task" data-id="${task.id}">✓</button>
+      </div>`;
+    }
+    const repeatBadge = task.repeat && task.repeat !== "none" ? `<span title="Wiederholt sich ${REPEAT_LABEL[task.repeat]}" style="opacity:0.55;margin-left:5px;display:inline-flex;vertical-align:-1px;">${ICON_REPEAT}</span>` : "";
+    return `<div class="task-row${task.id === lastAddedId ? " just-added" : ""}" style="--rowc:${m.color}">
+      ${renderCheckCircleButton(task, m.color)}
+      <div class="task-body">
+        <div class="task-who">${escapeHtml(m.name)}</div>
+        <div class="task-txt${task.done ? " done" : ""}">${escapeHtml(task.text)}${repeatBadge}</div>
+      </div>
+      <div class="task-actions">
+        <button class="icon-btn pill-edit" data-action="start-edit-task" data-id="${task.id}">✎</button>
+        <button class="icon-btn pill-danger" data-action="delete-task" data-id="${task.id}">✕</button>
+      </div>
+    </div>`;
+  }).join("") || emptyState(ICON_AUFGABEN, "Noch keine Aufgabe eingetragen – trag oben die erste ein.");
+
+  return `
+    <div class="section-head">
+      <h2 class="section-title" style="color:var(--c6);">Aufgaben</h2>
+      <button data-action="toggle-fairness" style="background:none;border:none;font-size:11px;font-weight:700;color:var(--ink-soft);opacity:0.75;display:inline-flex;align-items:center;gap:4px;">${ICON_SCALE} Fairness</button>
+    </div>
+    ${ui.showFairness ? renderFairnessCard() : ""}
+    <div class="floating-field" style="margin-bottom:8px;">
+      <input id="new-task-input" placeholder="Neue Aufgabe…" />
+      <button class="send icon-btn" data-action="add-task">➤</button>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">
+      ${["none", "daily", "weekly", "monthly"].map((r) => `<button class="chip" data-action="set-task-repeat" data-repeat="${r}" style="background:${ui.newTaskRepeat === r ? "var(--c6)" : "var(--tint)"};color:${ui.newTaskRepeat === r ? "var(--on-accent)" : "var(--ink-soft)"};border:none;display:inline-flex;align-items:center;gap:4px;">${r === "none" ? "Einmalig" : ICON_REPEAT + " " + REPEAT_LABEL[r].charAt(0).toUpperCase() + REPEAT_LABEL[r].slice(1)}</button>`).join("")}
+    </div>
+    ${taskRows}
+    ${!ui.showAllTasks && hidden.length > 0 ? `<button class="stack-pile" data-action="expand-tasks" style="display:inline-flex;align-items:center;gap:6px;justify-content:center;width:100%;">${ICON_ARCHIVE} +${hidden.length} ältere Aufgaben anzeigen</button>` : ""}`;
+}
+
+function renderFairnessCard() {
+  const counts = {};
+  state.members.forEach((m) => { counts[m.id] = 0; });
+  state.tasks.forEach((t) => { if (t.done && t.completedBy && counts[t.completedBy] !== undefined) counts[t.completedBy]++; });
+  const max = Math.max(1, ...Object.values(counts));
+  const rows = state.members.map((m) => {
+    const n = counts[m.id] || 0;
+    const pct = Math.round((n / max) * 100);
+    return `<div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px;"><span><span class="initial-badge">${memberInitial(m)}</span> ${escapeHtml(m.name)}</span><span>${n}</span></div>
+      <div style="height:8px;border-radius:999px;background:var(--tint);overflow:hidden;"><div style="height:100%;width:${pct}%;border-radius:999px;background:${m.color};"></div></div>
+    </div>`;
+  }).join("");
+  return `<div class="switch-row" style="flex-direction:column;align-items:stretch;">
+    <div style="font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Insgesamt erledigt</div>
+    ${rows}
+  </div>`;
+}
+
+function renderKalenderTab() {
+  const year = ui.calendarYear, month = ui.calendarMonth;
+  const today = todayDateStr();
+  const selected = ui.calendarSelectedDate || today;
+
+  // ---------- Monats-Grid bauen ----------
+  const firstWeekday = mondayIndex(new Date(year, month, 1).getDay());
+  const numDays = daysInMonth(year, month);
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= numDays; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const weekdayHead = WEEKDAY_LABELS_DE.map((w) => `<div class="cal-weekday">${w}</div>`).join("");
+  const dayCells = cells.map((d) => {
+    if (!d) return `<div class="cal-day empty"></div>`;
+    const dateStr = `${year}-${pad2(month + 1)}-${pad2(d)}`;
+    const hasEvents = eventsOnDate(dateStr).length > 0;
+    const classes = ["cal-day"];
+    if (dateStr === today) classes.push("today");
+    if (dateStr === selected) classes.push("selected");
+    return `<button class="${classes.join(" ")}" data-action="cal-select-day" data-date="${dateStr}">
+      <span>${d}</span>
+      ${hasEvents ? `<span class="cal-dot"></span>` : ""}
+    </button>`;
+  }).join("");
+
+  // ---------- Termine des ausgewählten Tages ----------
+  const selectedEvents = eventsOnDate(selected);
+  const renderRow = (ev) => {
+    const m = memberById(ev.who);
+    const editing = ui.editing && ui.editing.type === "event" && ui.editing.id === ev.id;
+    if (editing) {
+      return `<div class="event-card">
+        <input id="edit-event-title" class="edit-row-input" style="width:100%;margin-bottom:8px;" value="${escapeHtml(ev.title)}" />
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+          <input id="edit-event-date" type="date" class="date-field" value="${ev.date}" />
+          <span style="font-size:12px;opacity:0.5;flex-shrink:0;">bis</span>
+          <input id="edit-event-end-date" type="date" class="date-field" value="${ev.endDate || ""}" />
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input id="edit-event-time-from" type="time" class="time-field" value="${ev.timeFrom || ev.time || ""}" />
+          <span style="font-size:12px;opacity:0.5;flex-shrink:0;">bis</span>
+          <input id="edit-event-time-to" type="time" class="time-field" value="${ev.timeTo || ""}" />
+          <button class="icon-btn pill-confirm" data-action="save-edit-event" data-id="${ev.id}">✓</button>
+        </div>
+        ${ev.repeat && ev.repeat !== "none" ? `<p style="font-size:11px;opacity:0.55;margin:8px 0 0;display:flex;align-items:center;gap:5px;">${ICON_REPEAT} Wiederholt sich ${REPEAT_LABEL[ev.repeat]} – gilt für die ganze Serie. Zum Ändern der Wiederholung den Termin löschen und neu anlegen.</p>` : ""}
+      </div>`;
+    }
+    const repeatBadge = ev.repeat && ev.repeat !== "none" ? ` <span title="Wiederholt sich ${REPEAT_LABEL[ev.repeat]}" style="opacity:0.55;display:inline-flex;vertical-align:-1px;">${ICON_REPEAT}</span>` : "";
+    return `<div class="event-card${ev.id === lastAddedId ? " just-added" : ""}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div>
+          <div class="event-date-badge">${eventTimeLabel(ev)}${repeatBadge}</div>
+          <div class="event-title">${escapeHtml(ev.title)}</div>
+          <div class="event-who">eingetragen von ${escapeHtml(m.name)}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;">
+          <button class="icon-btn pill-edit" data-action="start-edit-event" data-id="${ev.id}" title="Von jedem Familienmitglied bearbeitbar">✎</button>
+          <button class="icon-btn pill-danger" data-action="delete-event" data-id="${ev.id}" title="${ev.repeat && ev.repeat !== "none" ? "Löscht die ganze Serie" : "Löschen"}">✕</button>
+        </div>
+      </div>
+    </div>`;
+  };
+  const selectedRows = selectedEvents.length
+    ? selectedEvents.map(renderRow).join("")
+    : `<p style="font-size:13px;opacity:0.55;margin:0 0 4px;">Noch kein Termin an diesem Tag.</p>`;
+
+  // Der Fingertipp auf einen Tagesbutton wählt den Tag aus UND öffnet direkt
+  // darunter das Eingabefeld für einen neuen Termin an diesem Tag - ein
+  // gesondertes Datumsfeld braucht es dafür nicht mehr, da der Tag bereits
+  // durch den Tipp feststeht.
+  const addForm = `
+    <div class="floating-field" style="margin-top:10px;margin-bottom:8px;">
+      <input id="new-event-title-input" placeholder="Neuer Termin…" />
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+      <span style="font-size:12px;opacity:0.5;flex-shrink:0;">bis (optional)</span>
+      <input id="new-event-end-date-input" type="date" class="date-field" min="${selected}" />
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+      <input id="new-event-time-from-input" type="time" class="time-field" />
+      <span style="font-size:12px;opacity:0.5;flex-shrink:0;">bis</span>
+      <input id="new-event-time-to-input" type="time" class="time-field" />
+      <button class="send icon-btn" data-action="add-event">➤</button>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      ${["none", "weekly", "monthly", "yearly"].map((r) => `<button class="chip" data-action="set-event-repeat" data-repeat="${r}" style="background:${ui.newEventRepeat === r ? "var(--c4)" : "var(--tint)"};color:${ui.newEventRepeat === r ? "var(--on-accent)" : "var(--ink-soft)"};border:none;display:inline-flex;align-items:center;gap:4px;">${r === "none" ? "Einmalig" : ICON_REPEAT + " " + REPEAT_LABEL[r].charAt(0).toUpperCase() + REPEAT_LABEL[r].slice(1)}</button>`).join("")}
+    </div>`;
+
+  return `
+    <div class="section-head">
+      <h2 class="section-title" style="color:var(--c4);">Kalender</h2>
+      <button data-action="export-ics" style="background:none;border:none;font-size:11px;font-weight:700;color:var(--ink-soft);opacity:0.75;display:inline-flex;align-items:center;gap:4px;">${ICON_DOWNLOAD.replace('width="18" height="18"', 'width="13" height="13"')} .ics exportieren</button>
+    </div>
+    <p style="font-size:13px;opacity:0.65;margin-top:-6px;margin-bottom:14px;">Ein gemeinsamer Kalender – jeder in der Familie kann Termine eintragen, bearbeiten und löschen. Tipp: Geburtstage/Jahrestage einfach als jährlich wiederkehrenden Termin eintragen.</p>
+
+    <div class="cal-header">
+      <button class="cal-nav-btn" data-action="cal-prev-month">‹</button>
+      <div class="cal-month-label">${MONTH_NAMES_DE[month]} ${year}</div>
+      <button class="cal-nav-btn" data-action="cal-next-month">›</button>
+    </div>
+    <div class="cal-grid${calendarSlideDir ? " slide-" + calendarSlideDir : ""}">${weekdayHead}${dayCells}</div>
+
+    <div class="cal-day-detail-head">Termine am ${formatSelectedDayLabel(selected)}</div>
+    ${selectedRows}
+    ${addForm}
+    ${renderUpcomingEventsList(selected)}`;
+}
+
+// Kompakte Liste der nächsten bevorstehenden Termine, unabhängig vom
+// gerade ausgewählten Kalendertag - damit man auch ohne Monat für Monat
+// zu blättern sieht, was als Nächstes ansteht. Der bereits am gewählten
+// Tag angezeigte Termin wird hier nicht doppelt aufgeführt.
+function renderUpcomingEventsList(selectedDate) {
+  const items = upcomingEvents(6).filter((ev) => ev.occurrenceDate !== selectedDate);
+  if (!items.length) return "";
+  const rows = items.map((ev) => {
+    const m = memberById(ev.who);
+    return `<button class="activity-row" style="--rowc:${m.color}" data-action="cal-select-day" data-date="${ev.occurrenceDate}">
+      <span class="activity-icon">${ICON_KALENDER}</span>
+      <div class="activity-body">
+        <div class="activity-who">${formatEventDate(ev)}</div>
+        <div class="activity-txt">${escapeHtml(ev.title)}</div>
+      </div>
+      <span style="opacity:0.35;font-size:13px;">›</span>
+    </button>`;
+  }).join("");
+  return `
+    <div class="section" style="margin-top:16px;">
+      <div class="section-head"><h2 class="section-title" style="font-size:16px;color:var(--c4);">Nächste Termine</h2></div>
+      ${rows}
+    </div>`;
+}
+
+
+function renderKarteTab() {
+  return `
+    <div class="section-head"><h2 class="section-title" style="color:var(--c5);">Karte</h2></div>
+    <button id="leaflet-map" class="map-tap-open" data-action="expand-map"><div id="map-fallback" class="skeleton skeleton-map" style="display:grid;place-items:center;text-align:center;padding:1rem;font-size:12px;color:var(--ink-soft);">Karte lädt … (braucht Internet)</div></button>
+    <div style="font-size:11px;opacity:0.45;margin-top:6px;text-align:center;">Antippen zum Vergrößern</div>
+    <div class="section">
+      <div class="section-head"><h2 class="section-title" style="font-size:16px;color:var(--c5);">Meine Standortfreigabe</h2></div>
+      ${renderOwnLocationSwitch()}
+    </div>
+    <div class="legal-note"><b>Datenschutz:</b> Die Standortfreigabe unten bestimmt nur, ob andere Familienmitglieder deinen "zu Hause/unterwegs"-Status sehen. Unabhängig davon fragt dein Gerät beim Öffnen dieser Karte einmalig deinen Standort ab, nur um die Kartenansicht zu zentrieren – dieser Wert wird nicht gespeichert und nicht geteilt.</div>`;
+}
+
+function renderOwnLocationSwitch() {
+  const me = ui.loggedInMemberId;
+  const s = statusById(me);
+  const m = memberById(me);
+  if (!s) return `<div class="empty-state">Bitte zuerst anmelden.</div>`;
+  return `
+    <div class="switch-row">
+      <div><div class="switch-label"><span class="initial-badge">${memberInitial(m)}</span> ${escapeHtml(m.name)} – zu Hause / unterwegs</div><div class="switch-sub">${s.unterwegs ? "unterwegs" : "zu Hause"}</div></div>
+      <button class="switch${s.unterwegs ? " on" : ""}" data-action="toggle-unterwegs" data-who="${me}"><div class="knob"></div></button>
+    </div>
+    <div class="switch-row">
+      <div><div class="switch-label">Standort teilen</div><div class="switch-sub">jederzeit an-/ausschaltbar, Standard: aus</div></div>
+      <button class="switch${s.shareLocation ? " on" : ""}" data-action="toggle-share-location" data-who="${me}"><div class="knob"></div></button>
+    </div>`;
+}
+
+function renderChatTab() {
+  const me = ui.loggedInMemberId || state.members[0].id;
+  const chat = sortNewestFirst(state.chat);
+  const { visible, hidden } = splitVisible(chat, VISIBLE_COUNT);
+  const shown = ui.showAllChat ? chat : visible;
+
+  const bubbles = shown.map((msg) => {
+    const m = memberById(msg.who);
+    const own = msg.who === me;
+    const likedByMe = (msg.likedBy || []).includes(me);
+    const likeCount = (msg.likedBy || []).length;
+    const mediaHtml = msg.image
+      ? `<img src="${msg.image}" alt="Foto" style="max-width:200px;width:100%;border-radius:12px;display:block;margin-top:${msg.text ? "6px" : "0"};" />`
+      : msg.audio
+      ? `<audio controls src="${msg.audio}" style="max-width:220px;width:100%;margin-top:${msg.text ? "6px" : "0"};"></audio>`
+      : "";
+    return `<div class="bubble-row${msg.id === lastAddedId ? " just-added" : ""}" style="display:flex;flex-direction:column;align-items:${own ? "flex-end" : "flex-start"};">
+      <div class="bubble${own ? " own" : ""}">
+        <div class="bubble-meta">${escapeHtml(m.name)}</div>
+        ${msg.text ? `<div>${escapeHtml(msg.text)}</div>` : ""}
+        ${mediaHtml}
+        <div class="bubble-actions">
+          <button class="reaction-btn${likedByMe ? " liked" : ""}" data-action="react-chat" data-id="${msg.id}">${likedByMe ? ICON_HEART_FILLED : ICON_HEART} ${likeCount || ""}</button>
+          <button class="reaction-btn pill-danger" data-action="delete-chat" data-id="${msg.id}">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("") || emptyState(ICON_CHAT, "Noch keine Nachricht – schreibt euch was Liebes.");
+
+  const pendingImageHtml = ui.pendingChatImage
+    ? `<div style="position:relative;display:inline-block;margin-bottom:8px;">
+        <img src="${ui.pendingChatImage.dataUrl}" alt="Foto-Vorschau" style="max-width:120px;max-height:120px;border-radius:12px;display:block;box-shadow:var(--shadow-card);" />
+        <button class="icon-btn pill-danger" data-action="clear-pending-chat-image" title="Foto entfernen" style="position:absolute;top:-8px;right:-8px;width:26px;height:26px;font-size:13px;">✕</button>
+      </div>`
+    : "";
+
+  return `
+    <div class="section-head"><h2 class="section-title" style="color:var(--c3);">Familien-Chat</h2></div>
+    ${pendingImageHtml}
+    <div class="floating-field" style="margin-bottom:14px;">
+      <input id="new-chat-input" placeholder="${ui.pendingChatImage ? "Bildunterschrift (optional)…" : "Nachricht schreiben…"}" />
+      <input type="file" id="chat-photo-input" accept="image/*" style="display:none;" />
+      <button class="icon-btn" data-action="pick-chat-photo" title="Foto anhängen">${ICON_CAMERA}</button>
+      <button class="icon-btn${ui.recordingVoice ? " pill-danger" : ""}" data-action="toggle-voice-record" title="${ui.recordingVoice ? "Aufnahme beenden" : "Sprachnachricht aufnehmen"}">${ui.recordingVoice ? ICON_STOP : ICON_MIC}</button>
+      <button class="send icon-btn" data-action="send-chat">➤</button>
+    </div>
+    ${ui.recordingVoice ? `<p style="font-size:12px;color:var(--c3);margin:-8px 0 12px;display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:999px;background:var(--c3);display:inline-block;flex-shrink:0;"></span>Aufnahme läuft… nochmal antippen zum Beenden (max. 60s)</p>` : ""}
+    ${bubbles}
+    ${!ui.showAllChat && hidden.length > 0 ? `<button class="stack-pile" data-action="expand-chat" style="display:inline-flex;align-items:center;gap:6px;justify-content:center;width:100%;">${ICON_ARCHIVE} +${hidden.length} ältere Nachrichten</button>` : ""}
+    <div class="legal-note">Nachrichten, Fotos und Sprachnachrichten bleiben lokal auf diesem Gerät, bis der Geräte-Sync aktiv ist. Fotos/Sprachnachrichten werden vor dem Speichern verkleinert bzw. komprimiert. Du schreibst als ${escapeHtml(memberById(me).name)}.</div>`;
+}
+
+function renderHinweiseTab() {
+  const syncLabel = ui.syncStatus === "connected" ? "✓ Verbunden" : ui.syncStatus === "connecting" ? "Verbinde…" : ui.syncStatus === "error" ? "Fehler" : "Nicht eingerichtet";
+  const notifSupported = "Notification" in window;
+  const notifSub = !notifSupported ? "vom Browser nicht unterstützt"
+    : Notification.permission === "denied" ? "in den iPhone-Einstellungen blockiert"
+    : ui.notificationsEnabled ? "an – bei neuen Aufgaben, Terminen & Chats"
+    : "aus – zum Aktivieren antippen";
+  return `
+    <div class="section-head"><h2 class="section-title" style="color:var(--c7);">Hinweise</h2></div>
+
+    <div class="section">
+      <div class="section-head"><h2 class="section-title" style="font-size:15px;color:var(--c7);">Familie & Gerät</h2></div>
+      <button class="switch-row" style="width:100%;text-align:left;" data-action="show-code">
+        <div><div class="switch-label">Familien-Code</div><div class="switch-sub">antippen zum Anzeigen</div></div>
+        <span class="chip" style="background:var(--tint);color:var(--ink-soft);box-shadow:none;">${ui.familyCode ?? "…"}</span>
+      </button>
+      <button class="switch-row" style="width:100%;text-align:left;" data-action="logout">
+        <div><div class="switch-label">Abmelden</div><div class="switch-sub">auf diesem Gerät ausloggen</div></div>
+        <span style="color:var(--ink-soft);display:inline-flex;">${ICON_DOOR}</span>
+      </button>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2 class="section-title" style="font-size:15px;color:var(--c7);">Daten & Sync</h2></div>
+      <button class="switch-row" style="width:100%;text-align:left;" data-action="download-backup">
+        <div><div class="switch-label">Backup sichern</div><div class="switch-sub">lädt eine Datei aufs Handy</div></div>
+        <span style="color:var(--ink-soft);display:inline-flex;">${ICON_DOWNLOAD}</span>
+      </button>
+      <button class="switch-row" style="width:100%;text-align:left;" data-action="trigger-restore">
+        <div><div class="switch-label">Backup laden</div><div class="switch-sub">spielt eine gesicherte Datei ein</div></div>
+        <span style="color:var(--ink-soft);display:inline-flex;">${ICON_UPLOAD}</span>
+      </button>
+      <button class="switch-row" style="width:100%;text-align:left;" data-action="show-sync">
+        <div><div class="switch-label">Cloud-Sync</div><div class="switch-sub">${syncLabel}</div></div>
+        <span style="color:var(--ink-soft);display:inline-flex;">${ICON_CLOUD}</span>
+      </button>
+      <input type="file" id="restore-file-input" accept="application/json" style="display:none;" />
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2 class="section-title" style="font-size:15px;color:var(--c7);">App</h2></div>
+      <button class="switch-row" style="width:100%;text-align:left;" data-action="show-install">
+        <div><div class="switch-label">Installieren</div><div class="switch-sub">als App aufs Handy</div></div>
+        <span style="color:var(--ink-soft);display:inline-flex;">${ICON_DEVICE}</span>
+      </button>
+      <div class="switch-row">
+        <div><div class="switch-label">Benachrichtigungen</div><div class="switch-sub">${notifSub}</div></div>
+        <button class="switch${ui.notificationsEnabled ? " on" : ""}" data-action="toggle-notifications"><div class="knob"></div></button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2 class="section-title" style="font-size:15px;color:var(--c7);">Rechtliches</h2></div>
+      <a class="switch-row" style="width:100%;text-align:left;text-decoration:none;" href="impressum.html">
+        <div><div class="switch-label">Impressum</div></div>
+        <span style="color:var(--ink-soft);display:inline-flex;">${ICON_DOC}</span>
+      </a>
+      <a class="switch-row" style="width:100%;text-align:left;text-decoration:none;" href="datenschutz.html">
+        <div><div class="switch-label">Datenschutz</div></div>
+        <span style="color:var(--ink-soft);display:inline-flex;">${ICON_LOCK}</span>
+      </a>
+    </div>`;
+}
+
+function renderSettingsModal(justOpened) {
+  if (!ui.showSettingsModal) return "";
+  const rows = state.members.map((m) => `
+    <div style="margin-bottom:14px;">
+      <input id="member-name-${m.id}" class="edit-row-input" style="width:100%;font-weight:700;" value="${escapeHtml(m.name)}" />
+    </div>`).join("");
+
+  const selfSection = ui.settingsMandatory ? `
+    <div style="margin:16px 0;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.6;margin-bottom:8px;">Wer bist du?</div>
+      ${state.members.map((m) => `<button class="self-pick-btn${ui.settingsSelf === m.id ? " selected" : ""}" data-action="pick-self" data-id="${m.id}"><span class="initial-badge">${memberInitial(m)}</span><span>${escapeHtml(m.name)}</span></button>`).join("")}
+    </div>` : "";
+
+  const canFinish = !ui.settingsMandatory || !!ui.settingsSelf;
+  const finishAction = ui.settingsMandatory ? "finish-mandatory-setup" : "close-settings";
+
+  return `
+    <div class="modal-backdrop"${ui.settingsMandatory ? "" : ' data-action="close-settings-backdrop"'}>
+      <div class="modal-card${justOpened ? " modal-enter" : ""}">
+        <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
+          <h3 style="margin:0;">Namen</h3>
+          ${ui.settingsMandatory ? "" : '<button class="close-btn" data-action="close-settings">✕</button>'}
+        </div>
+        ${ui.settingsMandatory ? `<p style="font-size:13px;line-height:1.6;opacity:0.75;margin-top:0;">Tragt eure echten Namen ein. Wähle danach unten, wer von euch du bist.</p>` : ""}
+        ${rows}
+        ${selfSection}
+        <button class="btn primary full"${canFinish ? "" : " disabled style=\"opacity:0.45;\""} data-action="${canFinish ? finishAction : "noop"}">Fertig</button>
+      </div>
+    </div>`;
+}
+
+function renderInstallModal(justOpened) {
+  if (!ui.showInstallModal) return "";
+  return `
+    <div class="modal-backdrop">
+      <div class="modal-card${justOpened ? " modal-enter" : ""}">
+        <div style="display:flex;justify-content:space-between;">
+          <h3 style="margin:0;">So installierst du FamLumi</h3>
+          <button class="close-btn" data-action="close-install">✕</button>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.6;">
+          <div style="background:var(--tint);border-radius:14px;padding:12px;color:var(--ink);"><b>iPhone · Safari</b><br/>Teilen-Button unten → „Zum Home-Bildschirm".</div>
+        </div>
+        <p style="font-size:12px;line-height:1.6;opacity:0.6;margin-top:16px;">FamLumi – 0 € Familien-App, läuft komplett lokal im Browser. Kein Server speichert Daten, kein Tracking, keine Werbung.</p>
+        <button class="btn primary full" style="margin-top:8px;" data-action="close-install">Verstanden</button>
+      </div>
+    </div>`;
+}
+
+function renderOnboarding(justOpened) {
+  if (!ui.showOnboarding) return "";
+  return `
+    <div class="onboarding-backdrop">
+      <div class="onboarding-card${justOpened ? " modal-enter" : ""}">
+        <div class="onboarding-logo"><span class="logo-fam" style="color:var(--c1);">Fam</span><span class="logo-lumi" style="color:var(--c1);opacity:0.68;">Lumi</span></div>
+        <p style="text-align:center;font-size:13px;opacity:0.6;margin:0 0 6px;">für uns, mit Liebe gemacht</p>
+        <div class="onboarding-step">
+          <div class="num">1</div>
+          <p><b>Heute</b> ist eure Startseite: nächster Termin und was zuletzt in der Familie passiert ist.</p>
+        </div>
+        <div class="onboarding-step">
+          <div class="num">2</div>
+          <p><b>Aufgaben, Kalender, Chat, Karte</b> über die Kacheln auf der Startseite – für alles gibt's ein eigenes Feld zum Hinzufügen, alles ist bearbeit- und löschbar. Aufgaben und Termine können auch wiederkehrend sein. Unter <b>Hinweise</b> findest du Familien-Code, Backup, Cloud-Sync und Installieren.</p>
+        </div>
+        <div class="onboarding-step">
+          <div class="num">3</div>
+          <p>Gleich geht's weiter mit euren <b>echten Namen</b> und wer von euch du bist.</p>
+        </div>
+        <div class="onboarding-step">
+          <div class="num">4</div>
+          <p>Alles bleibt <b>lokal auf dem Gerät</b> – für den Austausch zwischen euren Handys gibt's unten "Backup" und optional "Cloud-Sync".</p>
+        </div>
+        <button class="btn primary full" style="margin-top:20px;" data-action="dismiss-onboarding">Los geht's</button>
+      </div>
+    </div>`;
+}
+
+function renderQuickAddModal(justOpened) {
+  if (!ui.quickAdd) return "";
+  const META = {
+    aufgaben: { title: "Schnell: Neue Aufgabe", placeholder: "z. B. Müll rausbringen…", color: "var(--c6)" },
+    kalender: { title: "Schnell: Neuer Termin heute", placeholder: "z. B. Zahnarzt…", color: "var(--c4)" },
+    chat: { title: "Schnell: Nachricht senden", placeholder: "Nachricht…", color: "var(--c3)" },
+  };
+  const meta = META[ui.quickAdd];
+  if (!meta) return "";
+  return `
+    <div class="modal-backdrop" data-action="close-quick-add-backdrop">
+      <div class="modal-card${justOpened ? " modal-enter" : ""}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h3 style="margin:0;color:${meta.color};">${meta.title}</h3>
+          <button class="close-btn" data-action="close-quick-add">✕</button>
+        </div>
+        <div class="floating-field">
+          <input id="quick-add-input" type="text" placeholder="${meta.placeholder}" autofocus />
+          <button class="btn primary" data-action="quick-save">Speichern</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderReloginModal(justOpened) {
+  if (!ui.showReloginModal) return "";
+  const rows = state.members.map((m) => `<button class="self-pick-btn" data-action="relogin" data-id="${m.id}"><span class="initial-badge">${memberInitial(m)}</span> <span>${escapeHtml(m.name)}</span></button>`).join("");
+  return `
+    <div class="modal-backdrop">
+      <div class="modal-card${justOpened ? " modal-enter" : ""}">
+        <h3 style="margin:0 0 10px;">Wieder anmelden</h3>
+        <p style="font-size:13px;line-height:1.6;opacity:0.75;">Euer Familien-Code: <b>${ui.familyCode}</b>. Wähle, wer von euch du bist, um wieder online zu gehen.</p>
+        ${rows}
+      </div>
+    </div>`;
+}
+
+function renderSyncModal(justOpened) {
+  if (!ui.showSyncModal) return "";
+  const hasConfig = !!localStorage.getItem(FIREBASE_CONFIG_KEY);
+  const badgeClass = ui.syncStatus === "connected" ? "connected" : ui.syncStatus === "error" ? "error" : "off";
+  const badgeText = ui.syncStatus === "connected" ? "✓ Verbunden" : ui.syncStatus === "connecting" ? "Verbinde…" : ui.syncStatus === "error" ? "Fehler beim Verbinden" : "Nicht eingerichtet";
+  return `
+    <div class="modal-backdrop">
+      <div class="modal-card${justOpened ? " modal-enter" : ""}">
+        <div style="display:flex;justify-content:space-between;">
+          <h3 style="margin:0;">Cloud-Sync</h3>
+          <button class="close-btn" data-action="close-sync">✕</button>
+        </div>
+        <div class="sync-status-badge ${badgeClass}">${badgeText}</div>
+        <p style="font-size:14px;line-height:1.6;">Damit sich Aufgaben, Kalender & Co. automatisch zwischen den Handys der Familie abgleichen, braucht es ein <b>eigenes, kostenloses</b> Firebase-Projekt (Google-Konto reicht, dauerhaft gratis).</p>
+        <ol class="sync-steps">
+          <li>Auf <b>console.firebase.google.com</b> ein neues Projekt anlegen</li>
+          <li>Dort "Web-App hinzufügen" (das &lt;/&gt;-Symbol)</li>
+          <li>"Realtime Database" aktivieren (Testmodus reicht)</li>
+          <li>Den angezeigten <b>firebaseConfig</b>-Codeblock kopieren</li>
+          <li>Hier unten einfügen und speichern</li>
+        </ol>
+        <textarea id="sync-config-input" class="sync-textarea" placeholder='const firebaseConfig = { apiKey: "...", databaseURL: "...", ... }'></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn primary" data-action="save-sync-config">Speichern & verbinden</button>
+          ${hasConfig ? `<button class="btn" data-action="disconnect-sync">Trennen</button>` : ""}
+        </div>
+        <p style="font-size:12px;opacity:0.5;margin-top:12px;">Ohne diese Einrichtung funktioniert die App genauso weiter wie bisher – nur eben ohne automatischen Geräte-Abgleich.</p>
+      </div>
+    </div>`;
+}
+
+function renderTabContent() {
+  switch (ui.activeTab) {
+    case "heute": return renderHeuteTab();
+    case "aufgaben": return renderAufgabenTab();
+    case "kalender": return renderKalenderTab();
+    case "karte": return renderKarteTab();
+    case "chat": return renderChatTab();
+    case "hinweise": return renderHinweiseTab();
+    default: return "";
+  }
+}
+
+let leafletMap = null;
+let leafletMapExpanded = null;
+// Merkt sich, welche Modale beim letzten render() bereits sichtbar waren -
+// so spielt die "Erscheinen"-Animation nur beim tatsächlichen Öffnen, nicht
+// bei jedem Re-Render durch andere Aktionen.
+let prevOpenModals = new Set();
+// Wird von toggleChecked/thank für genau einen Render-Durchlauf gesetzt,
+// damit nur der gerade angetippte Haken die Pop-Animation bekommt.
+let lastToggledTaskId = null;
+let calendarSlideDir = null; // "left"/"right" für einen einzelnen Render-Durchlauf
+let lastAddedId = null; // sorgt dafür, dass nur das neu hinzugefügte Element einfliegt
+let activeRecorder = null; // aktuell laufender MediaRecorder für Sprachnachrichten
+
+// ---------- Löschen mit Rückgängig-Funktion ----------
+// Statt sofort endgültig zu löschen, wird der Eintrag direkt aus der Liste
+// entfernt UND gespeichert, aber 6 Sekunden lang in "pendingDelete"
+// zwischengehalten. Ein Toast mit "Rückgängig" erlaubt es, den Eintrag in
+// dieser Zeit wiederherzustellen (an der ursprünglichen Position). Nur der
+// jeweils letzte gelöschte Eintrag ist rückgängig machbar (einfacher, für
+// eine Familien-App ausreichender Umfang statt eines vollen Verlaufs).
+const DELETE_CONFIG = {
+  task: { get: () => state.tasks, set: (a) => { state.tasks = a; }, label: (t) => t.text, name: "Aufgabe" },
+  event: { get: () => state.events, set: (a) => { state.events = a; }, label: (t) => t.title, name: "Termin" },
+  chat: { get: () => state.chat, set: (a) => { state.chat = a; }, label: (t) => t.text || "Nachricht", name: "Nachricht" },
+};
+let pendingDelete = null; // { kind, item, index, timeoutId }
+
+function ensureLeaflet(cb) {
+  if (window.L) { cb(); return; }
+  if (!document.getElementById("leaflet-css")) {
+    const link = document.createElement("link");
+    link.id = "leaflet-css"; link.rel = "stylesheet";
+    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    document.head.appendChild(link);
+  }
+  if (document.getElementById("leaflet-js")) {
+    // Skript wird schon geladen (z.B. von der Karte) - auf onload warten statt doppelt einzufügen.
+    document.getElementById("leaflet-js").addEventListener("load", cb, { once: true });
+    return;
+  }
+  const script = document.createElement("script");
+  script.id = "leaflet-js";
+  script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+  script.onload = cb;
+  script.onerror = () => { window.dispatchEvent(new Event("leaflet-load-error")); };
+  document.body.appendChild(script);
+}
+
+// Baut eine einfache Standort-Karte (Kachel + Marker) in den übergebenen Container.
+function buildLocationMap(container, zoom) {
+  container.innerHTML = "";
+  const center = ui.myLocation ? [ui.myLocation.lat, ui.myLocation.lon] : [51.16, 10.45]; // Fallback: Mitte Deutschlands, bis der eigene Standort bekannt ist
+  const map = window.L.map(container, { zoomControl: false }).setView(center, ui.myLocation ? zoom : 6);
+  window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap-Mitwirkende" }).addTo(map);
+  if (ui.myLocation) window.L.marker(center).addTo(map);
+  return map;
+}
+
+function initMapIfNeeded() {
+  if (ui.activeTab !== "karte") return;
+  const container = document.getElementById("leaflet-map");
+  if (!container) return;
+  const onError = () => {
+    const fb = document.getElementById("map-fallback");
+    if (fb) fb.textContent = "Karte konnte nicht geladen werden (kein Internet?)";
+  };
+  window.addEventListener("leaflet-load-error", onError, { once: true });
+  ensureLeaflet(() => { if (window.L) leafletMap = buildLocationMap(container, 12); });
+}
+
+function initExpandedMapIfNeeded() {
+  const container = document.getElementById("leaflet-map-expanded");
+  if (!container) return;
+  const onError = () => {
+    const fb = document.getElementById("map-expanded-fallback");
+    if (fb) fb.textContent = "Karte konnte nicht geladen werden (kein Internet?)";
+  };
+  window.addEventListener("leaflet-load-error", onError, { once: true });
+  ensureLeaflet(() => { if (window.L) leafletMapExpanded = buildLocationMap(container, 14); });
+}
+
+function renderMapModal(justOpened) {
+  if (!ui.mapExpanded) return "";
+  return `
+    <div class="map-modal-backdrop">
+      <button class="map-modal-close" data-action="close-map-modal">✕</button>
+      <div class="map-modal-body${justOpened ? " modal-enter" : ""}">
+        <div id="leaflet-map-expanded" style="width:100%;height:100%;"><div id="map-expanded-fallback" class="skeleton" style="height:100%;display:grid;place-items:center;text-align:center;padding:1rem;font-size:13px;color:var(--ink-soft);">Karte lädt …</div></div>
+      </div>
+    </div>`;
+}
+
+function renderToast() {
+  if (!ui.toast) return "";
+  return `<div class="toast" role="status">
+    <span class="toast-text">${escapeHtml(ui.toast.text)}</span>
+    <button class="toast-undo" data-action="undo-delete">Rückgängig</button>
+  </div>`;
+}
+
+function render() {
+  const root = document.getElementById("root");
+  // Modal-Öffnen-Animationen nur beim tatsächlichen Öffnen abspielen, nicht
+  // bei jedem Re-Render durch andere Aktionen (siehe prevOpenModals).
+  const currentModals = new Set();
+  if (ui.showSettingsModal) currentModals.add("settings");
+  if (ui.showInstallModal) currentModals.add("install");
+  if (ui.showSyncModal) currentModals.add("sync");
+  if (ui.showReloginModal) currentModals.add("relogin");
+  if (ui.showOnboarding) currentModals.add("onboarding");
+  if (ui.mapExpanded) currentModals.add("map");
+  if (ui.quickAdd) currentModals.add("quickadd");
+  const justOpened = (key) => currentModals.has(key) && !prevOpenModals.has(key);
+
+  try {
+    root.innerHTML = `
+      <div class="app">
+        ${renderHeader()}
+        <div class="container">
+          ${renderTabContent()}
+        </div>
+      </div>
+      ${renderSettingsModal(justOpened("settings"))}
+      ${renderInstallModal(justOpened("install"))}
+      ${renderSyncModal(justOpened("sync"))}
+      ${renderReloginModal(justOpened("relogin"))}
+      ${renderOnboarding(justOpened("onboarding"))}
+      ${renderMapModal(justOpened("map"))}
+      ${renderQuickAddModal(justOpened("quickadd"))}
+      ${renderToast()}
+    `;
+    prevOpenModals = currentModals;
+  } catch (e) {
+    // Ein Fehler in einem einzelnen Tab soll nie die ganze App unbenutzbar machen - lieber auf "Heute" zurückfallen
+    // als eine leere/eingefrorene Seite zu zeigen.
+    console.error("Render-Fehler, falle auf Heute zurück:", e);
+    if (ui.activeTab !== "heute") { ui.activeTab = "heute"; render(); return; }
+  }
+  initMapIfNeeded();
+  if (ui.mapExpanded) initExpandedMapIfNeeded();
+  const editInput = document.getElementById("edit-inline-input");
+  if (editInput) { editInput.focus(); editInput.setSelectionRange(editInput.value.length, editInput.value.length); }
+  const quickInput = document.getElementById("quick-add-input");
+  if (quickInput) quickInput.focus();
+}
+
+// ---------- Event-Delegation ----------
+
+// Lang-Druck auf eine Kachel (Aufgaben/Kalender/Chat) öffnet direkt ein
+// schnelles Eingabefeld, ohne erst in den Bereich zu wechseln.
+let quickPressTimer = null;
+let quickPressFired = false;
+function clearQuickPressTimer() { if (quickPressTimer) { clearTimeout(quickPressTimer); quickPressTimer = null; } }
+document.addEventListener("pointerdown", (e) => {
+  const tile = e.target.closest(".app-tile[data-quick]");
+  if (!tile) return;
+  quickPressFired = false;
+  clearQuickPressTimer();
+  quickPressTimer = setTimeout(() => {
+    quickPressFired = true;
+    if (navigator.vibrate) navigator.vibrate(10);
+    actions.openQuickAdd(tile.dataset.quick);
+  }, 480);
+});
+["pointerup", "pointercancel", "pointerleave"].forEach((evt) => {
+  document.addEventListener(evt, clearQuickPressTimer);
+});
+document.addEventListener("click", (e) => {
+  if (quickPressFired && e.target.closest(".app-tile[data-quick]")) {
+    quickPressFired = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const action = el.dataset.action;
+  const id = el.dataset.id;
+
+  switch (action) {
+    case "noop": break;
+    case "add-task": { const inp = document.getElementById("new-task-input"); actions.addTask(inp.value, ui.newTaskRepeat); } break;
+    case "toggle-checked": actions.toggleChecked(id, el); break;
+    case "start-edit-task": actions.startEditTask(id); break;
+    case "save-edit-task": actions.saveEditTask(id); break;
+    case "delete-task": actions.deleteTask(id); break;
+    case "expand-tasks": actions.expandTasks(); break;
+    case "set-task-repeat": actions.setTaskRepeat(el.dataset.repeat); break;
+    case "toggle-fairness": actions.toggleFairness(); break;
+    case "add-event": {
+      const titleInp = document.getElementById("new-event-title-input");
+      const fromInp = document.getElementById("new-event-time-from-input");
+      const toInp = document.getElementById("new-event-time-to-input");
+      const endDateInp = document.getElementById("new-event-end-date-input");
+      actions.addEvent(titleInp.value, ui.calendarSelectedDate || todayDateStr(), fromInp.value, toInp.value, endDateInp ? endDateInp.value : "", ui.newEventRepeat);
+    } break;
+    case "set-event-repeat": actions.setEventRepeat(el.dataset.repeat); break;
+    case "export-ics": actions.exportIcs(); break;
+    case "start-edit-event": actions.startEditEvent(id); break;
+    case "save-edit-event": actions.saveEditEvent(id); break;
+    case "delete-event": actions.deleteEvent(id); break;
+    case "cal-prev-month": actions.calPrevMonth(); break;
+    case "cal-next-month": actions.calNextMonth(); break;
+    case "cal-select-day": actions.calSelectDay(el.dataset.date); break;
+    case "toggle-unterwegs": actions.toggleUnterwegs(el.dataset.who); break;
+    case "toggle-share-location": actions.toggleShareLocation(el.dataset.who); break;
+    case "send-chat": { const inp = document.getElementById("new-chat-input"); actions.sendChat(inp.value); } break;
+    case "pick-chat-photo": document.getElementById("chat-photo-input").click(); break;
+    case "clear-pending-chat-image": actions.clearPendingChatImage(); break;
+    case "toggle-voice-record": actions.toggleVoiceRecord(); break;
+    case "react-chat": actions.reactChat(id); break;
+    case "delete-chat": actions.deleteChat(id); break;
+    case "undo-delete": actions.undoDelete(); break;
+    case "expand-chat": actions.expandChat(); break;
+    case "goto-tab": actions.gotoTab(el.dataset.tab); break;
+    case "open-activity-item": actions.openActivityItem(el.dataset.tab, el.dataset.itemId); break;
+    case "reset-seen-activity": actions.resetSeenActivity(); break;
+    case "show-settings": actions.showSettings(); break;
+    case "close-settings": actions.closeSettings(); break;
+    case "finish-mandatory-setup": actions.finishMandatorySetup(); break;
+    case "close-settings-backdrop": if (e.target === el) actions.closeSettings(); break;
+    case "pick-self": actions.pickSelf(id); break;
+    case "show-install": actions.showInstall(); break;
+    case "close-install": actions.closeInstall(); break;
+    case "toggle-sound": actions.toggleSound(); break;
+    case "toggle-notifications": actions.toggleNotifications(); break;
+    case "expand-map": actions.expandMap(); break;
+    case "close-map-modal": actions.closeMapModal(); break;
+    case "toggle-theme": actions.toggleTheme(); break;
+    case "dismiss-onboarding": actions.dismissOnboarding(); break;
+    case "download-backup": actions.downloadBackup(); break;
+    case "trigger-restore": document.getElementById("restore-file-input").click(); break;
+    case "show-sync": actions.showSync(); break;
+    case "close-sync": actions.closeSync(); break;
+    case "close-quick-add": actions.closeQuickAdd(); break;
+    case "close-quick-add-backdrop": if (e.target === el) actions.closeQuickAdd(); break;
+    case "quick-save": actions.quickSave(); break;
+    case "save-sync-config": actions.saveSyncConfig(); break;
+    case "disconnect-sync": actions.disconnectSync(); break;
+    case "logout": actions.logout(); break;
+    case "relogin": actions.relogin(id); break;
+    case "show-code": alert("Euer Familien-Code: " + (ui.familyCode || "…")); break;
+  }
+});
+
+document.addEventListener("change", (e) => {
+  if (e.target && e.target.id === "restore-file-input") {
+    actions.restoreBackupFromFile(e.target.files[0]);
+    e.target.value = "";
+    return;
+  }
+  if (e.target && e.target.id === "chat-photo-input") {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (file) actions.compressChatImage(file);
+    return;
+  }
+});
+
+// Enter-Taste in den "Neu hinzufügen"-Feldern soll wie der Senden-Button wirken.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const idToAction = {
+    "new-task-input": () => actions.addTask(e.target.value, ui.newTaskRepeat),
+    "new-event-title-input": () => document.querySelector('[data-action="add-event"]').click(),
+    "new-chat-input": () => actions.sendChat(e.target.value),
+    "quick-add-input": () => actions.quickSave(),
+  };
+  if (idToAction[e.target.id]) idToAction[e.target.id]();
+});
+
+// ---------- Cloud-Sync-Engine (Firebase Realtime Database, optional) ----------
+
+let firebaseApp = null;
+let firebaseDb = null;
+let pushTimer = null;
+let lastPushedAt = null;
+
+function parseFirebaseConfigInput(text) {
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const obj = new Function("return (" + match[0] + ")")();
+    if (obj && obj.apiKey && obj.databaseURL) return obj;
+    return null;
+  } catch (e) { return null; }
+}
+
+function loadFirebaseScripts(cb) {
+  if (window.firebase && window.firebase.database) { cb(); return; }
+  const s1 = document.createElement("script");
+  s1.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js";
+  s1.onload = () => {
+    const s2 = document.createElement("script");
+    s2.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js";
+    s2.onload = cb;
+    s2.onerror = () => { ui.syncStatus = "error"; render(); };
+    document.body.appendChild(s2);
+  };
+  s1.onerror = () => { ui.syncStatus = "error"; render(); };
+  document.body.appendChild(s1);
+}
+
+function initFirebaseSync() {
+  let config;
+  try {
+    const raw = localStorage.getItem(FIREBASE_CONFIG_KEY);
+    config = raw ? JSON.parse(raw) : null;
+  } catch (e) { config = null; }
+  if (!config || !ui.familyCode) return;
+
+  loadFirebaseScripts(() => {
+    try {
+      firebaseApp = window.firebase.initializeApp(config);
+      firebaseDb = window.firebase.database();
+      firebaseDb.ref("families/" + ui.familyCode).on("value", (snapshot) => {
+        const remote = snapshot.val();
+        ui.syncStatus = "connected";
+        if (!remote || !remote.lastModified) { render(); return; }
+        if (remote.lastModified === lastPushedAt) { render(); return; }
+        if (!state.lastModified || remote.lastModified > state.lastModified) {
+          notifyNewItems(state, remote);
+          state = Object.assign(defaultData(), remote);
+          render();
+        }
+      }, () => { ui.syncStatus = "error"; render(); });
+      pushToFirebase();
+    } catch (e) {
+      ui.syncStatus = "error"; render();
+    }
+  });
+}
+
+function pushToFirebase() {
+  if (!firebaseDb || !ui.familyCode) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    state.lastModified = Date.now();
+    lastPushedAt = state.lastModified;
+    firebaseDb.ref("families/" + ui.familyCode).set(state).catch(() => { ui.syncStatus = "error"; render(); });
+  }, 700);
+}
+
+function showLocalNotification(title, body) {
+  const opts = { body, icon: "./icon-192.png", badge: "./icon-192.png", tag: "famlumi-" + Date.now() };
+  if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+    navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, opts)).catch(() => {
+      try { new Notification(title, opts); } catch (e) {}
+    });
+  } else {
+    try { new Notification(title, opts); } catch (e) {}
+  }
+}
+
+// Vergleicht alten und neu vom Sync eingetroffenen Stand und benachrichtigt
+// nur über wirklich neue Einträge anderer Familienmitglieder (nicht die eigenen,
+// nicht beim allerersten Verbinden mit bereits bestehenden Daten).
+function notifyNewItems(oldState, newState) {
+  if (!ui.notificationsEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
+  if (!oldState.lastModified) return; // allererster Sync: keine Flut alter Einträge melden
+  const oldIds = new Set([
+    ...(oldState.tasks || []).map((t) => t.id),
+    ...(oldState.events || []).map((e) => e.id),
+    ...(oldState.chat || []).map((c) => c.id),
+  ]);
+  const KIND_LABEL = { aufgabe: "Neue Aufgabe", termin: "Neuer Termin", chat: "Neue Chat-Nachricht" };
+  const newItems = [];
+  (newState.tasks || []).forEach((t) => { if (!oldIds.has(t.id) && t.who !== ui.loggedInMemberId) newItems.push({ kind: "aufgabe", who: t.who, text: t.text }); });
+  (newState.events || []).forEach((ev) => { if (!oldIds.has(ev.id) && ev.who !== ui.loggedInMemberId) newItems.push({ kind: "termin", who: ev.who, text: ev.title }); });
+  (newState.chat || []).forEach((c) => { if (!oldIds.has(c.id) && c.who !== ui.loggedInMemberId) newItems.push({ kind: "chat", who: c.who, text: c.text }); });
+  newItems.slice(0, 3).forEach((item) => {
+    const m = memberById(item.who);
+    showLocalNotification(`${KIND_LABEL[item.kind]} · FamLumi`, `${m ? m.name + ": " : ""}${item.text}`);
+  });
+}
+
+function init() {
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme === "dark") {
+    ui.theme = "dark";
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+  ui.seenActivityIds = loadSeenActivityIds();
+  ui.notificationsEnabled = localStorage.getItem(NOTIF_ENABLED_KEY) === "1" && "Notification" in window && Notification.permission === "granted";
+
+  const savedCode = localStorage.getItem(CODE_KEY);
+  if (savedCode) {
+    ui.familyCode = savedCode;
+  } else {
+    ui.familyCode = generateFamilyCode();
+    localStorage.setItem(CODE_KEY, ui.familyCode);
+  }
+
+  const saved = loadSavedData();
+  if (saved) {
+    state = Object.assign(defaultData(), saved);
+    if (!state.soundOn && state.soundOn !== false) state.soundOn = true;
+  }
+  if (state.soundOn === undefined) state.soundOn = true;
+
+  const loggedIn = localStorage.getItem(LOGIN_KEY);
+  if (loggedIn && state.members.some((m) => m.id === loggedIn)) {
+    ui.loggedInMemberId = loggedIn;
+    const s = statusById(loggedIn);
+    if (s) { s.online = true; saveData(); }
+  }
+
+  // Onboarding + verpflichtendes Setup nur beim allerersten Start
+  if (!localStorage.getItem(ONBOARDING_KEY)) {
+    ui.showOnboarding = true;
+  } else if (!ui.loggedInMemberId) {
+    ui.showSettingsModal = true;
+    ui.settingsMandatory = true;
+  }
+
+  if (localStorage.getItem(FIREBASE_CONFIG_KEY)) {
+    ui.syncStatus = "connecting";
+  }
+
+  render();
+  initFirebaseSync();
+
+  // Live-Uhr im Header: aktualisiert nur den Textinhalt, kein voller Re-Render
+  // (vermeidet Fokus-Sprünge in offenen Eingabefeldern/Modals).
+  setInterval(() => {
+    const el = document.getElementById("header-clock");
+    if (el) el.textContent = formatClockTime(new Date());
+  }, 30000);
+}
+
+init();
+
+  
